@@ -1,0 +1,15 @@
+#player_log {
+    height: 100%;
+    width: 300px;
+    overflow: scroll;
+    font-size: 110%;
+    resize:none;
+  }
+
+  ::selection {
+    background: transparent; /*Makes selection invisible*/
+  }
+
+  ::-moz-selection { /*Makes selection invisible*/
+    background: transparent;
+  }
