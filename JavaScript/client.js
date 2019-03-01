@@ -5,10 +5,6 @@ var played = [];
 var current_stats = "";
 var pool = [];
 
-var pools = [];
-var pools_chosen = true;
-var choose_pool;
-
 var move = [];
 
 var chat_width = 300 + 50;
@@ -327,6 +323,16 @@ socket.on('hand', function(cards) {
 socket.on('stats', function(stats) {
 	//player stats are being sent
 	current_stats = stats;
+});
+
+socket.on('played', function(cards) {
+	//player played cards are being sent
+	var w = min((width - spc)/cards.length, max_card_width);
+	var temp = [];
+	for(c in cards) {
+		temp.push(new Card(c * w + spc, height/2 + spc, w - spc, height/4 - 20, cards[c].suit, cards[c].value, cards[c].colour));
+	}
+	played = temp;
 });
 
 socket.on('pool', function(cards) {

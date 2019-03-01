@@ -48,6 +48,7 @@ class Game {
 
 	inc_turn(removed) {
 		//Go to next players turn
+		this.played = [];
 		if(removed == null) {
 			this.send_to_log(this.turn, ": turn has ended");
 			this.emit_to_player(this.turn, 'disable', '');
@@ -147,6 +148,7 @@ class Game {
 		this.emit_to_player(player, 'hand', this.hand_to_send(player));
 		this.emit_to_player(player, 'stats', this.stats_to_send(player));
 		this.emit_to_player(player, 'pool', this.pool_to_send());
+		this.emit_to_player(player, 'pool', this.played_to_send());
 	}
 
 	send_cards_to_all() {
@@ -179,18 +181,44 @@ class Game {
 		server.emit_to_player(socket, 'valid', 'valid move'); //obsolete
 		if(move.type == "hand") {
 			var card = this.players[player].hand[move.index];
-			if(this.apply_card_stats(player, card, move.index)) {
-				this.send_to_log(player, ": played a " + this.get_card_name(card));
-				this.send_cards_to_all();
-			}
+
+			this.played.concat(this.players[player].play_card(move.index));
+			
+			this.send_to_log(player, ": played the " + this.get_card_name(card));
+			this.send_cards_to_all();
+			
+			this.check_for_matches(player, card);
 		} else if(move.type == "choose") {
 			this.handle_choose(player, move);
 		}
 		this.update_game_state();
 	}
 
-	check_for_matches(move) {
+	check_for_matches(player) {
+		//checks to see if there are any cards on the table that add up to the value.
+		//if more than one option exists, let the player choose
+		//if only one option exists, force the play
+		//if there is a card of exactly the same value, force the play
 
+		var exact_matches = [];
+
+		for(var c in this.table) {
+			if(this.table[c].value == card.value) {
+				//exact match
+				exact_matches.push(c);
+			}
+		}
+
+		if(exact_matches.length == 1) {
+			//force player's choice
+			this.players[player].collect_cards([this.table[exact_matches[0]], this.played[0]]); //give player cards
+			this.table.splice(exact_matches[0], 1); //remove card from table
+			return;
+		} else if(exact_matches.length > 1) {
+			//player can choose which of the two cards they want
+		}
+
+		//check for scoopas
 	}
 
 	validate_move(socket, move) {
@@ -199,65 +227,6 @@ class Game {
 			//not the players turn
 			if(socket != this.curr_player().socket) return false;
 		}
-		return true;
-	}
-
-	apply_card_stats(player, card, index) {
-		var stats = this.get_card_stats(card);
-		//Played an action card without enough actions left
-		if(this.players[player].current_round_stats.action < 1 && this.get_card_type(card).includes("action")) return false;
-		var func;
-		try {
-			func = this.cards[card].function;
-		} catch(e) {
-			console.log("Could not access data for card: " + card);
-		}
-		if(func != null) { //Do custom functionality if it exists
-			try {
-				this.game_functions[func](this, player);
-			} catch (e) {
-				console.log("Error in game function file for " + this.game_data.title + " in function '" + this.cards[card].function + "'");
-				console.log(e);
-			}
-		}
-		for(var s in stats) {
-			if(this.game_data.stat_types.includes(s)) { //"action", "buy" etc
-				//Add it to the players stats
-				this.players[player].add_to_round_stats(s, stats[s]);
-			} else {
-				//It is an effect, do the required moves etc
-				if(s == "card") { //player draws cards
-					this.players[player].draw_cards(stats[s]);
-				} else if(s == "trash") { //player trashes a card
-					var message;
-					if(stats[s][0] == stats[s][1]) {
-						message = "You must trash " + stats[s][0] + " cards from your hand";
-					} else {
-						message = "You may trash between " + stats[s][0] + " and " + stats[s][1] + " cards from your hand";
-					}
-					this.player_choose(player, "hand", stats[s][0], stats[s][1], "trash", this.cards[card].function, message);
-				} else if(s == "discard") {	//player discards a card				
-					var message;
-					if(stats[s][0] == stats[s][1]) {
-						message = "You must discard " + stats[s][0] + " cards from your hand";
-					} else {
-						message = "You may discard between " + stats[s][0] + " and " + stats[s][1] + " cards from your hand";
-					}
-					this.player_choose(player, "hand", stats[s][0], stats[s][1], "discard", this.cards[card].function, message);
-				} else if(s == "add_card") { //player gains a card
-					this.add_card(player, stats[s][0], stats[s][1], this.cards[card].function);
-				} else if(s == "add_points") {
-					this.players[player].add_points(stats[s]);
-				} else if(s == "damage") {
-					this.deal_damage(player, stats[s]);
-				}
-			}
-		}
-		if(this.get_card_type(card).includes("action")) { //Played an action card, decrease actions left by one
-			this.players[player].add_to_round_stats("action", -1);
-		}
-		this.players[player].play_card(index);
-		this.players[player].run_callbacks(this, player, card, "played");
 		return true;
 	}
 
@@ -403,74 +372,11 @@ class Game {
 		return -1;
 	}
 
-	get_card_stats(name) {
-		try {
-			return this.cards[name].stats;
-		} catch(e) {
-			console.log("could not get stats for card '" + name + "'");
-			return [];
-		}
-	}
-
-	get_card_type(name) {
-		try {
-			return this.cards[name].type;
-		} catch(e) {
-			console.log("could not get type for card '" + name + "'");
-			return "";
-		}
-	}
-
-	get_card_cost(name) {
-		try {
-			return this.cards[name].cost;
-		} catch(e) {
-			console.log("could not get cost for card '" + name + "'");
-			return Infinity;
-		}
-	}
-
-	get_card_info(name) {
-		var info = {};
-		//Use the name of the card to get more info about it
-		var card = this.cards[name];
-		var desc = "";
-		info.name = card.name;
-		if(card.faction != null) {
-			desc += card.faction +  " " ;
-		}
-		desc +=card.type + "\n";
-		if(card.cost != null) {
-			desc += "Cost: " + card.cost + " " + card.currency + "\n";
-		}
-		desc += card.desc;
-		info.desc = desc;
-		var col;
-		if(card.faction != null) col = this.game_data.colours[card.faction];
-		else if(card.type != null) col = this.game_data.colours[card.type];
-		else col = this.game_data.colours["default"];
-		info.col = col;
-		return info;
-	}
-
-	get_card_name(name) {
+	get_card_name(card) {
 		//Use the variable name to get the cards proper name
-		try {
-			return this.cards[name].name;
-		} catch(e) {
-			console.log("could not get name for card '" + name + "'");
-			return [];
-		}
+		return card.value + " of " + card.suit;
 	}
 	
-	get_card_currency(name) {
-		try {
-			return this.cards[name].currency;
-		} catch(e) {
-			console.log("could not get currnecy for card '" + name + "'");
-			return [];
-		}
-	}
 
 	hand_to_send(player) {
 		//Converts the cards object array into a format to send to the client (less data intensive)
@@ -484,6 +390,10 @@ class Game {
 
 	pool_to_send() {
 		return this.table;
+	}
+	
+	played_to_send() {
+		return this.played;
 	}
 
 	send_to_log(player, message) {
