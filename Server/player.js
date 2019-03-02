@@ -34,13 +34,13 @@ class Player {
 	}
 
 	hand_empty() {
-		return this.hand.length <= 0;
+		return this.hand.length == 0;
 	}
 
 	play_card(index) {
 		//Moves cards from the hand to the played array	
 		if(index == null) return;
-		return this.hand.splice(index, 1); //copy values over and remove cards from hand
+		return this.hand.splice(index, 1)[0];
 	}
 
 	deal_cards(cards) {
@@ -48,7 +48,7 @@ class Player {
 	}
 
 	collect_cards(cards) {
-		this.cards.concat(cards);
+		this.cards = this.cards.concat(cards);
 	}
 
 	calc_score() {

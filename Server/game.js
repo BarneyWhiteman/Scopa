@@ -35,32 +35,27 @@ class Game {
 			server.game_over(this.game_id);
 			this.emit_to_all_players("over", "gameover");
 		}
-		// if(this.turn_structure[this.phase] == "clear") {
-		// 	this.curr_player().new_round();
-		// 	this.inc_phase();
-		// 	this.send_cards_to_player(this.turn);
-		// }
-		// if(this.turn_structure[this.phase] != "action" && this.curr_player().current_round_stats[this.turn_structure[this.phase]] === 0) {
-		// 	//If player has no moves for current phase (not if in action phase since players should still be allowed to play money)
-		// 	this.inc_phase(); //Go to next phase automatically
-		// }
+
+		if(this.all_hands_empty()) {
+			if(this.deck.length == 0) {
+				this.new_round();
+			} else {
+				this.new_hand();
+			}
+		}
 	}
 
-	inc_turn(removed) {
+	inc_turn() {
 		//Go to next players turn
+		this.table = this.table.concat(this.played);
 		this.played = [];
-		if(removed == null) {
-			this.send_to_log(this.turn, ": turn has ended");
-			this.emit_to_player(this.turn, 'disable', '');
-			this.curr_player().end_round();
-			this.send_cards_to_player(this.turn);
-			this.alert_player(this.turn, 'Your turn has ended'); //let the player know their turn is over
-		}
+		this.send_cards_to_all();
+
+		this.emit_to_player(this.turn, 'turn', false);
+		this.emit_to_player(this.turn, 'disable', '');
+		
 		this.turn = (this.turn + 1) % this.players.length;
-		if(this.turn == 0) this.round += 1;
-		this.apply_permanent_cards(this.turn);
-		this.alert_player(this.turn, 'It is now your turn!'); //let new player know their turn started
-		this.send_to_log(this.turn, ": turn has begun");
+		this.emit_to_player(this.turn, 'turn', true);
 	}
 
 	new_round() {
@@ -68,19 +63,31 @@ class Game {
 		this.turn = this.first_turn;
 		this.first_turn = (this.first_turn + 1) % this.players.length;
 		this.table = this.deck.splice(0, 4);
-		console.log(this.table);
+
+		this.emit_to_player(this.turn, 'turn', true);
+
 		for(var p in this.players) {
 			this.players[p].new_round();
 		}
 		this.new_hand();
-		this.send_cards_to_all();
 	}
 
 	new_hand() {
 		//deal throughout the game
+		console.log("new hand");
 		for(var p in this.players) {
 			this.players[p].deal_cards(this.deck.splice(0, 3));
 		}
+		this.send_cards_to_all();
+	}
+
+	all_hands_empty() {
+		for(var p in this.players) {
+			if(!this.players[p].hand_empty()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	game_over() {
@@ -115,6 +122,7 @@ class Game {
 	}
 
 	add_player(socket) {
+		if(socket == null || socket == undefined) { return; }
 		if(this.players.length < this.max_players) {
 			this.players.push(new player(socket));
 			var name = "Player" + (this.players.length - 1);
@@ -125,7 +133,7 @@ class Game {
 		console.log(socket + ' has joined game' + this.game_id);
 		this.send_to_log(this.players.length - 1, ": joined the game");
 	
-		if(this.players.length >= this.max_players) {
+		if(this.players.length == this.max_players) {
 			this.full = true;
 			if(this.players.length >= this.min_players) { this.start_game(); }
 		}
@@ -148,7 +156,7 @@ class Game {
 		this.emit_to_player(player, 'hand', this.hand_to_send(player));
 		this.emit_to_player(player, 'stats', this.stats_to_send(player));
 		this.emit_to_player(player, 'pool', this.pool_to_send());
-		this.emit_to_player(player, 'pool', this.played_to_send());
+		this.emit_to_player(player, 'played', this.played_to_send());
 	}
 
 	send_cards_to_all() {
@@ -180,11 +188,12 @@ class Game {
 		}
 		server.emit_to_player(socket, 'valid', 'valid move'); //obsolete
 		if(move.type == "hand") {
-			var card = this.players[player].hand[move.index];
+			var card = this.players[player].play_card(move.index);
 
-			this.played.concat(this.players[player].play_card(move.index));
-			
 			this.send_to_log(player, ": played the " + this.get_card_name(card));
+
+			
+			this.played.push(card);
 			this.send_cards_to_all();
 			
 			this.check_for_matches(player, card);
@@ -194,7 +203,7 @@ class Game {
 		this.update_game_state();
 	}
 
-	check_for_matches(player) {
+	check_for_matches(player, card) {
 		//checks to see if there are any cards on the table that add up to the value.
 		//if more than one option exists, let the player choose
 		//if only one option exists, force the play
@@ -213,12 +222,25 @@ class Game {
 			//force player's choice
 			this.players[player].collect_cards([this.table[exact_matches[0]], this.played[0]]); //give player cards
 			this.table.splice(exact_matches[0], 1); //remove card from table
+			this.played = [];
+			this.check_for_scopas(player);
+			this.inc_turn();
 			return;
 		} else if(exact_matches.length > 1) {
 			//player can choose which of the two cards they want
-		}
+			//CHOOOOOSE
+			this.player_choose(player, 1, 1, card.value);
+			return
+		} else {
 
-		//check for scoopas
+			this.inc_turn();
+		}
+	}
+
+	check_for_scopas(player) {
+		if(!(this.all_hands_empty() && this.deck.length == 0) && this.table.length == 0) {
+			this.players[player].add_scopa();
+		}
 	}
 
 	validate_move(socket, move) {
@@ -230,79 +252,21 @@ class Game {
 		return true;
 	}
 
-	purchase_from_pool(player, pool, free) {
-		if(this.pools[pool].cards.length > 0) { //check if there are enough cards
-			var card = this.pools[pool].cards[0]; //get the top card from the selected pool
-			var card_cost = this.cards[card].cost
-			var location = "discard";
-			if(this.cards[card].discount) {
-				var discount = this.game_functions[this.cards[card].function + "_discount"](this, player);
-				if(discount == "hand") {
-					location = "hand";
-				} else {
-					card_cost -= discount;
-				}
-			}
-			var card_currency = this.cards[card].currency;
-			var player_value = this.players[player].current_round_stats[card_currency]; //players money
-			if(free || player_value >= card_cost) {
-				if(!this.pools[pool].permanent) { //if the pool is not a permanent card
-					this.pools[pool].cards.splice(0, 1); //remove the top card
-					if(this.cards[card].discard == true) {
-						this.pools.trash.cards.push(card);
-					} else {
-						if(location == "discard") {
-							this.players[player].add_card_to_discard(card);
-						} else if(location == "hand") {
-							this.players[player].add_card_to_hand(card);
-						} else if(location == "deck") {
-							this.players[player].add_card_to_deck(card);
-						}
-					}
-				}
-				if(this.cards[card].discard == true) {
-					this.apply_card_stats(player, card);
-				}
-				if(this.pools[pool].type == "dealt") {
-					if(this.pools[pool].cards.length == 0) {
-						this.draw_pool_card(pool);
-					}
-				}
-				this.players[player].add_to_round_stats(card_currency, -1 * card_cost);
-				this.players[player].add_to_round_stats("buy", -1);
-				this.players[player].run_callbacks(this, player, card, "acquired");
-				return true;//successfully purchased
-			}
-		}
-		return false;//did not purchase
-	}
-
-	add_card(player, price, currency, callback) {
-		this.players[player].add_card_price = price;
-		this.players[player].add_card_currency = currency;
-		var message = "You may gain a card costing up to " + price + " " + currency + " from one of the pools";
-		this.player_choose(player, "pool", 0, 1, "gain", callback, message, price);
-	}
-
-	player_choose(player, place, min, max, type, callback, message, price) {
+	player_choose(player, min, max, value, message) {
 		//place should either be "hand" or "pool". num is the number of cards to choose. 
 		//type is what will be done with the selected cards (ie discard, trash, etc)
 		this.players[player].choosing = true;
-		this.players[player].choose_type = type;
-		this.players[player].callback = callback;
-		this.players[player].place = place;
 		this.players[player].min = min;
 		this.players[player].max = max;
-		var choose = { place: place, min: min, max: max, type: type, price: price};
+		this.players[player].value = value;
+		var choose = {min: min, max: max, value: value};
 		this.emit_to_player(player, 'choose', choose);
-		this.emit_to_player(player, 'alert', message);
+		if(message != null) { this.emit_to_player(player, 'alert', message); }
 	}
 
 	handle_choose(player, choices) {
-		var place = choices.place; //"hand" or "pool" (where the cards have been selected);
 		var cards = choices.selected; //indecies of chosen cards within the place of selection
-		if(!this.players[player].choosing || place != this.players[player].place || 
-			cards.length < this.players[player].min || cards.length > this.players[player].max) return; //check if the player should be making a choice.
+		if(!this.players[player].choosing || cards.length < this.players[player].min || cards.length > this.players[player].max) return; //check if the player should be making a choice.
 
 		var card_names = [];
 		cards.sort(function (a, b) { return a - b; });  //indicies of cards selected (sorted into ascending order);
@@ -384,8 +348,11 @@ class Game {
 	}
 
 	stats_to_send(player) {
-		//Gets the players round stats (how many actions, buys etc) into a format that is good for the client
-		return "Scopas: " + this.players[player].scopas;
+		//Gets the players round stats (how many actions, buys etc) into a format that is good for the 
+		var stats = "Scopas: " + this.players[player].scopas;
+		stats += "\nNo. cards collected: " + this.players[player].cards.length + "\n";
+		stats += "\nNo. cards in deck: " + this.deck.length;
+		return stats;
 	}
 
 	pool_to_send() {

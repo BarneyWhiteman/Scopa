@@ -15,14 +15,16 @@ var extra_button;
 var max_card_width;
 
 var choosing = false; //Variables for allowing players to choose cards (ie for "discard 4 cards");
-var choose_place = "";
+var choose_value;
+var choose_max;
+var choose_min;
+var total_value = 0;
 var num_selected = 0;
-var min_selected = 0;
-var max_selected = 0;
-var price = 0;
 var prev_button_state = true;
 
 var revealed_cards = [];
+
+var turn = false;
 
 var alert_display = false;
 var alert_message = "";
@@ -52,21 +54,23 @@ var unexpected_button;
 var width, height;
 
 function setup() {
-	var cnv = createCanvas(window.innerWidth - chat_width, window.innerHeight - 50);
-	cnv.canvas.style.float = 'right';
-	width = cnv.width;
-	height = cnv.height;
+	try {
+		var cnv = createCanvas(window.innerWidth - chat_width, window.innerHeight - 50);
+		cnv.canvas.style.float = 'right';
+		width = cnv.width;
+		height = cnv.height;
+		stroke(51);
+		noFill();
+		textAlign(CENTER, CENTER);
+		textSize(text_lrg);
+	} catch (e) {}
 	max_card_width = width/6;
 	text_lrg = minimum(width, height)/30;
 	text_med = minimum(width, height)/40;
 	text_sml = minimum(width, height)/50;
 	text_min = minimum(width, height)/60;
-	stroke(51);
-	noFill();
-	textAlign(CENTER, CENTER);
-	textSize(text_lrg);
 
-	end_button = new Button(width * 7/8, height * 3/4, width/8 - 1, height/4, "Not your turn", "#ddffdd", function() { //Used for ending a phase
+	end_button = new Button(width * 7/8, height * 3/4, width/8 - 1, height/4, "", "#ffffff", function() { //Used for ending a phase
 		if(started) {
 			if(choosing) {
 				end_choosing();
@@ -103,10 +107,8 @@ function windowResized() {
 	for(var c in pool) {
 		pool[c].resize(ratio_x, ratio_y);
 	}
-	for(var c in pools) {
-		pools[c].resize(ratio_x, ratio_y);
-	}
 	
+	if(extra_button != null) { extra_button.resize(ratio_x, ratio_y); }
 	end_button.resize(ratio_x, ratio_y);
 	unexpected_button.resize(ratio_x, ratio_y);
 	
@@ -127,31 +129,21 @@ function draw() {
 	if(unexpected_over) {
 		draw_unexpected();
 	} else if(!started) {
-		if(!selected) {
-			draw_game_select();
-		} else if(!pools_chosen) {
-			draw_pool_select();
-		} else {
-			stroke(0, 200, 0);
-			noFill();
-			rect(width/2 - 100, height/2 - 50, 200, 100);
-			fill(0, 200, 0);
-			noStroke();
-			text("Waiting", width/2, height/2);
-		}
+		fill(200, 200, 200);
+		noStroke();
+		text("Waiting for opponent...", width/2, height/2);
 	} else {
 		draw_grid();
 		draw_cards();
 	}
+	if(started && !unexpected_over && !turn) {
+		fill(50, 50);
+		noStroke();
+		rect(0, 0, width, height);
+	}
 	if(alert_display) {
 		display_alert();
 	}
-}
-
-function draw_game_select() {
-	fill(51);
-	noStroke();
-	text("Waiting for opponent...", width/2, height/4);
 }
 
 function draw_grid() {
@@ -175,7 +167,7 @@ function draw_grid() {
 	fill(0)
 	textSize(text_sml);
 	textAlign(LEFT, TOP);
-	text(current_stats, 5, 13/16 * height, width/8 - spc, height/4 - spc);
+	text(current_stats, 5, 13/16 * height, width/2 - spc, height/4 - spc);
 }
 
 function draw_cards() {
@@ -213,33 +205,21 @@ function mouseReleased() {
 
 	if(started && !alert_display) {
 		for(i in hand) {
-			if(hand[i].pressed()) {
-				if(choosing && (choose_place == "hand" || choose_place == "any")) {
-					if(hand[i].selected) {
-						num_selected --;
-						hand[i].selected = !hand[i].selected;
-					} else if(!hand[i].selected && num_selected < max_selected) {
-						num_selected ++;
-						hand[i].selected = !hand[i].selected;
-					}
-				} else if(!choosing) {
-					make_move({type: "hand", index: i});
-				}				
+			if(hand[i].pressed() && !choosing) {
+				make_move({type: "hand", index: i});
 				return;
 			}
 		}
 		for(i in pool) {
-			if(pool[i].pressed()) {
-				if(choosing && (choose_place == "pool" || choose_place == "any")) {
-					if(pool[i].selected) {
-						num_selected --;
-						pool[i].selected = !pool[i].selected;
-					} else if(!pool[i].selected && num_selected < max_selected) {
-						num_selected ++;
-						pool[i].selected = !pool[i].selected;
-					}
-				} else if(!choosing) {
-					make_move({type: "pool", index: pool[i].pool});
+			if(pool[i].pressed() && choosing) {
+				if(pool[i].selected) {
+					pool[i].selected = !pool[i].selected;
+					total_value -= pool[i].value;
+					num_selected --;
+				} else if(!pool[i].selected && num_selected < max_selected) {
+					pool[i].selected = !pool[i].selected;
+					total_value += pool[i].value;
+					num_selected ++;
 				}
 				return;
 			}
@@ -294,6 +274,10 @@ socket.on('reset', function() {
 	reset();
 });
 
+socket.on('turn', function(val) {
+	turn = val;
+});
+
 socket.on('new', function() {
 	//joined a game
 	started = false;
@@ -327,6 +311,8 @@ socket.on('stats', function(stats) {
 
 socket.on('played', function(cards) {
 	//player played cards are being sent
+	console.log("Played:");
+	console.log(cards);
 	var w = min((width - spc)/cards.length, max_card_width);
 	var temp = [];
 	for(c in cards) {
@@ -366,10 +352,11 @@ socket.on('choose', function(data) {
 	prev_button_state = end_button.disabled;
 	end_button.disabled = false;
 	choose_place = data.place;
+	choose_value = data.value;
+	choose_max = data.max;
+	choose_min = data.min;
+	total_value = 0;
 	num_selected = 0;
-	min_selected = data.min;
-	max_selected = data.max;
-	price = data.price;
 	prev_phase = end_button.text;
 	end_button.text = "End " + data.type;
 });
@@ -420,32 +407,12 @@ function custom_alert(message) {
 }
 
 function end_choosing() {
-	if(num_selected >= min_selected && num_selected <= max_selected) {
+	if(num_selected >= min_selected && num_selected <= max_selected && total_value == choose_value) {
 		var selected = [];
-		if(choose_place == "hand" || choose_place == "any") {
-			for(var c in hand) {
-				if(hand[c].selected) selected.push(c);
+		for(var c in pool) {
+			if(pool[c].selected) {
+				selected.push(pool[c].pool);
 			}
-		} else if(choose_place == "pool" || choose_place == "any") {
-			for(var c in pool) {
-				if(pool[c].selected) {
-					if(price != null && pool[c].get_cost() > price) {
-						custom_alert("Please choose a card costing " + price + " or less");
-						return false;
-					}
-					selected.push(pool[c].pool);
-				}
-			}
-		}
-		if(choose_place == "pool_selection") {
-			for(var c in pools) {
-				if(pools[c].selected) {
-					selected.push(c);
-				}
-			}
-			socket.emit('pools_selected', selected);
-		} else {
-			make_move({ type: "choose", place: choose_place, selected: selected});
 		}
 		deselect_all();		
 		choosing = false;
@@ -453,24 +420,21 @@ function end_choosing() {
 		end_button.disabled = prev_button_state;
 		return true;
 	} else {
+		if(total_value != choose_value) {
+			custom_alert("Please choose card(s) that have a combined value of " + choose_value);
+		}
 		if(min_selected == max_selected) {
-			custom_alert("Please choose " + min_selected + " cards");
+			custom_alert("Please choose " + min_selected + " card(s) that have a combined value of " + choose_value);
 		} else {
-			custom_alert("Please choose between " + min_selected + " and " + max_selected + " cards");
+			custom_alert("Please choose between " + min_selected + " and " + max_selected + " cards that have a combined value of " + choose_value);
 		}
 		return false;
 	}
 }
 
 function deselect_all() {
-	for(var c in hand) {
-		hand[c].selected = false;
-	}
 	for(var c in pool) {
 		pool[c].selected = false;
-	}
-	for(var c in pools) {
-		pools[c].selected = false;
 	}
 }
 
@@ -513,20 +477,20 @@ class Card {
 			fill(this.colour[0], this.colour[1], this.colour[2]);
 			rect(this.x, this.y, this.w, this.h);
 		}
-		if(!this.pressed()) {
-			fill(this.colour[0] + 100, this.colour[1] + 100, this.colour[2] + 100);
-		} else {
+		if(this.pressed() && !alert_display) {
 			fill(200, 200, 200);
+		} else {
+			fill(this.colour[0] + 100, this.colour[1] + 100, this.colour[2] + 100);
 		}
 		noStroke();
-		//fill(255);
+		
 		rect(this.x + 5, this.y + 5, this.w - spc, this.h - spc);
 		fill(51);
 		noStroke();
 		textSize(text_med);
 		text(this.value + " of " + this.suit, this.x + 5, this.y + 5, this.w - spc, this.h/2 - spc);
-		var size = minimum(this.w - spc * 2, this.h/2 - spc * 2);
-		image(icons[this.suit], this.x + this.w/2 + spc - size/2, this.y + (this.h * 3/4) + spc - size, size, size);
+		var size = minimum(this.w - (spc * 2), this.h/2 - (spc * 2));
+		image(icons[this.suit], this.x + this.w/2 - size/2, this.y + (this.h * 3/4) - size/2, size, size);
 	}
 
 	pressed() {
@@ -587,11 +551,7 @@ function reset() {
 	chat_width = 300 + 50;
 	max_card_width;
 	choosing = false; //Variables for allowing players to choose cards (ie for "discard 4 cards");
-	choose_place = "";
-	num_selected = 0;
-	min_selected = 0;
-	max_selected = 0;
-	price = 0;
+	total_value = 0;
 	revealed_cards = [];
 	alert_display = false;
 	alert_message = "";

@@ -71,7 +71,6 @@ io.on('connection', function(socket) {
             }
             //Remove game
             remove_game(index);
-            console.log("game" + games[index].game_id + " has been removed");
         }
     })
 });
@@ -130,14 +129,10 @@ function get_players_game_index(id) {
 
 function remove_game(id) {
     //remove game from list of available games
-
-    var game_players = games[id].players;
-
+    var game_id = games[id].game_id;
     games.splice(id, 1);
-
-    for(player in game_players) {
-        add_player_to_game(game_players[player].socket)
-    }
+    
+    console.log("game" + game_id + " has been removed");
 }
 
 exports.emit_to_player = emit_to_player;
