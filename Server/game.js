@@ -62,14 +62,16 @@ class Game {
 		//inital deal etc
 		this.turn = this.first_turn;
 		this.first_turn = (this.first_turn + 1) % this.players.length;
-		this.table = this.deck.splice(0, 4);
-
+		//this.table = this.deck.splice(0, 4);
+		this.table = [new card(10, "Suns", 1, "#ffffff"), new card(10, "Cups", 1, "#ffffff")];
 		this.emit_to_player(this.turn, 'turn', true);
 
 		for(var p in this.players) {
 			this.players[p].new_round();
 		}
 		this.new_hand();
+		this.players[0].deal_cards([new card(10, "Swords", 1, "#ffffff")]);
+		this.send_cards_to_all();
 	}
 
 	new_hand() {
@@ -115,10 +117,7 @@ class Game {
 				game.alert_player(player, "You are player " + player + ".\n\nPlayer " + game.turn + 
 				" is starting the game. It will be your turn in just a moment!");
 			});
-			console.log('Game is ready to begin!');
-
-			this.update_game_state();
-		
+			console.log('Game is ready to begin!');		
 	}
 
 	add_player(socket) {
@@ -127,11 +126,12 @@ class Game {
 			this.players.push(new player(socket));
 			var name = "Player" + (this.players.length - 1);
 			this.players[this.players.length -1 ].set_name(name);
+			server.emit_to_player(socket, 'test', 'game' + this.game_id);
 			server.emit_to_player(socket, 'new', 'new game beginning');
 		}
 		
 		console.log(socket + ' has joined game' + this.game_id);
-		this.send_to_log(this.players.length - 1, ": joined the game");
+		this.send_to_log(this.players.length - 1, ": joined game" + this.game_id);
 	
 		if(this.players.length == this.max_players) {
 			this.full = true;
@@ -198,7 +198,12 @@ class Game {
 			
 			this.check_for_matches(player, card);
 		} else if(move.type == "choose") {
-			this.handle_choose(player, move);
+			if(!this.handle_choose(player, move)) {
+				//chose invalid cards, try again;
+				this.player_choose(player, this.players[player].min, this.players[player].max, this.players[player].value, "Chosen card(s) are invalid, please try again!");
+			} else {
+				this.inc_turn();
+			}
 		}
 		this.update_game_state();
 	}
@@ -229,7 +234,7 @@ class Game {
 		} else if(exact_matches.length > 1) {
 			//player can choose which of the two cards they want
 			//CHOOOOOSE
-			this.player_choose(player, 1, 1, card.value);
+			this.player_choose(player, 1, 1, card.value, "Please choose a card to collect with a value of " + card.value);
 			return
 		} else {
 
@@ -264,53 +269,31 @@ class Game {
 		if(message != null) { this.emit_to_player(player, 'alert', message); }
 	}
 
-	handle_choose(player, choices) {
-		var cards = choices.selected; //indecies of chosen cards within the place of selection
-		if(!this.players[player].choosing || cards.length < this.players[player].min || cards.length > this.players[player].max) return; //check if the player should be making a choice.
+	handle_choose(player, move) {
+		var cards = move.selected; //indecies of chosen cards within the place of selection
+		if(!this.players[player].choosing || cards.length < this.players[player].min || cards.length > this.players[player].max) return false; //check if the player should be making a choice.
 
 		var card_names = [];
 		cards.sort(function (a, b) { return a - b; });  //indicies of cards selected (sorted into ascending order);
-		var type = this.players[player].choose_type;
-		if(place == "hand" || place == "played") {
-			for(var c in cards) {
-				if(place == "hand") card_names.push(this.players[player].hand[cards[c] - c]);
-				if(place == "played") card_names.push(this.players[player].played[cards[c] - c]);
-				if(type == "discard") {
-					this.send_to_log(player, ": discarded a " + this.get_card_name(card_names[card_names.length - 1]));
-					this.players[player].discard_card(cards[c] - c); //offset by num of previously removed cards
-				} else if(type == "trash") {
-					this.send_to_log(player, ": trashed a " + this.get_card_name(card_names[card_names.length - 1]));
-					this.pools.trash.cards.push(this.players[player].trash_card(cards[c] - c)); //offset by num of previously removed cards
-				}
-			}
-		} else if(place == "pool") {
-			if(type == "gain" && cards.length == 1) { //if the player is gaining a card
-				var card = this.pools[cards[0]].cards[0];
-				if(this.get_card_cost(card) <= this.players[player].add_card_price && this.get_card_currency(card) == this.players[player].add_card_currency) {
-					card_names.push(this.pools[cards[0]].cards[0]);
-					this.send_to_log(player, ": gained a " + this.get_card_name(this.pools[cards[0]].cards[0]));
-					this.players[player].add_card_to_discard(this.pools[cards[0]].cards[0]);
-					this.pools[cards[0]].cards.splice(0, 1); //remove the top card
-					if(this.pools[cards[0]].type == "dealt") {
-						if(this.pools[cards[0]].cards.length == 0) {
-							this.draw_pool_card(cards[0]);
-						}
-					}
 
-				}
-			}
-		} else if(place == "any") {
-			card_names.push("any");
+		//get total value;
+		var total_value = 0;
+		for(var i in cards) {
+			total_value += this.table[cards[i]].value;
 		}
+		if(total_value > this.players[player].value) return false;
+
+		//cards add up to total and there are the correct number, give cards to the player;
+		var collected = this.played.splice(0);
+		for(var i in cards) {
+			collected.push(this.table.splice(cards[i], 1));
+		}
+		
+		this.players[player].collect_cards(collected);
+
 		this.players[player].choosing = false;
-		if(this.players[player].callback) {
-			try {
-				this.game_functions[this.players[player].callback](this, player, card_names);
-			} catch(e) {
-				console.log(e);
-			}
-		}
-		this.send_cards_to_player(player);
+		this.send_cards_to_all();
+		return true;
 	}
 
 	handle_pool_choose(selection) {
@@ -348,11 +331,8 @@ class Game {
 	}
 
 	stats_to_send(player) {
-		//Gets the players round stats (how many actions, buys etc) into a format that is good for the 
-		var stats = "Scopas: " + this.players[player].scopas;
-		stats += "\nNo. cards collected: " + this.players[player].cards.length + "\n";
-		stats += "\nNo. cards in deck: " + this.deck.length;
-		return stats;
+		//Gets the players round stats (how many actions, buys etc) into a format that is good for the
+		return ["Scopas: " + this.players[player].scopas, "No. cards collected: " + this.players[player].cards.length, "No. cards in deck: " + this.deck.length];
 	}
 
 	pool_to_send() {

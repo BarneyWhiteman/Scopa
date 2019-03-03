@@ -30,7 +30,10 @@ io.on('connection', function(socket) {
     
     //New player, let them choose the game they want
     console.log(socket.id + " joined the server");
-    add_player_to_game(socket.id);
+    
+    setTimeout(function() {
+        add_player_to_game(socket.id);
+    }, 300);
 
     socket.on('test', function(message) {
         console.log(message);
@@ -38,8 +41,9 @@ io.on('connection', function(socket) {
         
     socket.on('new', function() {
         //player has selected which games to play, add them to a game or create a new one
+        remove_player_from_game(socket.id, get_players_game_index(socket.id));
         emit_to_player(socket.id, 'reset', 'new game');
-        add_player_to_game(socket.id);
+        //add_player_to_game(socket.id);
     });
 
 
@@ -56,11 +60,10 @@ io.on('connection', function(socket) {
 
         console.log(socket.id + " disconnected: " + index);
         
-        if(index != -1) {
-            //remove from game object
-            games[index].remove_player(socket.id);
-        }
+        remove_player_from_game(socket.id, index);
         
+        console.log(players);
+
         if(index != -1 && games[index].players.length < games[index].min_players) {
             //If the game has too few people in it: remove it
             if(games[index].started) {
@@ -79,6 +82,14 @@ http.listen(port, function(){
     //Listen on specified port for connections
     console.log('listening on port:' + port);
 });
+
+function remove_player_from_game(id, index) {
+    if(index != -1) {
+        //remove from game object
+        games[index].remove_player(id);
+        players.splice(players.indexOf([id, games[index].game_id]), 1);
+    }
+}
 
 function emit_to_each_player_in_game(game, topic, msg) {
     //Sends a message to all the players in a given game
@@ -113,6 +124,7 @@ function add_player_to_game(id) {
         games[games.length - 1].add_player(id);
         players.push([id, game_id]);
     }
+    
 }
 
 function get_players_game_index(id) {

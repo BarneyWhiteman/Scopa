@@ -37,10 +37,10 @@ scores = {
 };
 
 colours = {
-    "Suns": [255, 165, 0],
-    "Cups": [0, 196, 3],
-    "Feathers": [188, 28, 28],
-    "Swords": [50, 50, 50]
+    "Suns": "#ffa500",
+    "Cups": "#00c403",
+    "Feathers": "#bc1c1c",
+    "Swords": "#323232"
 }
 
 module.exports = Card;
