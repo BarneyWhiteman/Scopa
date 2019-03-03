@@ -19,12 +19,14 @@ class Game {
 
 		this.winning_score = 11;
 		
-		this.deck = card.get_deck();
+		this.deck = [];
 		this.table = [];
 		this.played = [];
 
 		this.first_turn = 0;
 		this.turn = 0;
+
+		this.last_collected = -1;
 	}
 
 	update_game_state() {
@@ -34,10 +36,18 @@ class Game {
 			this.alert_all_players("Game over. The Winners are:\n" + this.get_winner_text() + "\n\nOnce this window is closed you will be taken to the game selection screen");
 			server.game_over(this.game_id);
 			this.emit_to_all_players("over", "gameover");
+			return;
 		}
 
 		if(this.all_hands_empty()) {
 			if(this.deck.length == 0) {
+				if(this.table.length != 0) {
+					this.players[this.last_collected].collect_cards(this.table);
+				}
+				this.calc_scores();
+				if(this.game_over()) {
+					this.update_game_state();
+				}
 				this.new_round();
 			} else {
 				this.new_hand();
@@ -60,23 +70,21 @@ class Game {
 
 	new_round() {
 		//inital deal etc
+		this.deck = card.get_deck();
 		this.turn = this.first_turn;
 		this.first_turn = (this.first_turn + 1) % this.players.length;
-		//this.table = this.deck.splice(0, 4);
-		this.table = [new card(10, "Suns", 1, "#ffffff"), new card(10, "Cups", 1, "#ffffff")];
+		this.table = this.deck.splice(0, 4);
 		this.emit_to_player(this.turn, 'turn', true);
+		this.emit_to_player((this.turn + 1) % this.players.length, 'turn', false);
 
 		for(var p in this.players) {
 			this.players[p].new_round();
 		}
 		this.new_hand();
-		this.players[0].deal_cards([new card(10, "Swords", 1, "#ffffff")]);
-		this.send_cards_to_all();
 	}
 
 	new_hand() {
 		//deal throughout the game
-		console.log("new hand");
 		for(var p in this.players) {
 			this.players[p].deal_cards(this.deck.splice(0, 3));
 		}
@@ -99,6 +107,30 @@ class Game {
 			}
 		}
 		return false;
+	}
+
+	calc_scores() {
+		var stats = [];
+		for(var p in this.players) {
+			stats.push(this.players[p].calc_score());
+		}
+		var scores = [stats[0].scopas, stats[1].scopas];
+		//Num Cards
+		if(stats[0].num_cards > stats[1].num_cards && stats[0].num_cards != stats[0].num_cards) scores[0] += 1;
+		else scores[1] += 1;
+		//Seven
+		if(stats[0].seven) scores[0] += 1;
+		else scores[1] += 1;
+		//Suns
+		if(stats[0].suns > stats[1].suns && stats[0].suns != stats[0].suns) scores[0] += 1;
+		else scores[1] += 1;
+		//Prime
+		if(stats[0].prime > stats[1].prime && stats[0].prime != stats[0].prime) scores[0] += 1;
+		else scores[1] += 1;
+
+		this.players[0].add_score(scores[0]);
+		this.players[1].add_score(scores[1]);
+		this.alert_all_players("Round over.\nScores:\nPlayer0: " + scores[0] + "\nPlayer1: " + scores[1]);
 	}
 
 	start_game() {
@@ -229,18 +261,81 @@ class Game {
 			this.table.splice(exact_matches[0], 1); //remove card from table
 			this.played = [];
 			this.check_for_scopas(player);
+			this.last_collected = player;
 			this.inc_turn();
 			return;
 		} else if(exact_matches.length > 1) {
-			//player can choose which of the two cards they want
-			//CHOOOOOSE
 			this.player_choose(player, 1, 1, card.value, "Please choose a card to collect with a value of " + card.value);
-			return
+			return;
 		} else {
+			//no exact matches, need to check for additions
+			var number_set = [];
+			for(var c in this.table) {
+				number_set.push({value: this.table[c].value, index: c});
+			}
+			var additions = this.subset_sum(number_set, card.value) || [];		
+			
+			
+			if(additions.length == 1) {
+				//only one addition -> force it;
+				additions[0].sort(function(a, b) {
+					return b.index - a.index;
+				});
+				var collected = [];
+				for(var i in additions[0]) {
+					collected = collected.concat(this.table.splice(additions[0][i].index, 1));
+				}
 
-			this.inc_turn();
+				collected.push(this.played[0]);
+				this.players[player].collect_cards(collected);
+				this.played = [];
+				this.check_for_scopas(player);
+				this.last_collected = player;
+				this.inc_turn();
+				return;
+			} else if(additions.length > 1){
+				//more than one -> let the player choose;
+				this.player_choose(player, 2, this.table.length, card.value, "Please choose cards that add up to a value of " + card.value);
+				return;
+			}
 		}
+		this.inc_turn();
 	}
+
+	subset_sum(number_set, target, partial, result) {
+		var s, n, remaining;
+	  
+		partial = partial || [];
+		result = result || [];
+
+		var vals = [];
+		for(var i in partial) {
+			vals.push(partial[i].value);
+		}
+	  
+		// sum partial
+		s = vals.reduce(function (a, b) {
+			return a + b;
+		}, 0);
+	  
+		// check if the partial sum is equals to target
+		if (s === target) {
+			result.push(partial);
+			return result;
+		}
+	  
+		if (s >= target) {
+		  	return result;  // if we reach the number why bother to continue
+		}
+	  
+		for (var i = 0; i < number_set.length; i++) {
+		  	n = number_set[i];
+		  	remaining = number_set.slice(i + 1);
+		  	result = result.concat(this.subset_sum(remaining, target, partial.concat([n])));
+		}
+		return result;
+	  }
+	  
 
 	check_for_scopas(player) {
 		if(!(this.all_hands_empty() && this.deck.length == 0) && this.table.length == 0) {
@@ -274,7 +369,7 @@ class Game {
 		if(!this.players[player].choosing || cards.length < this.players[player].min || cards.length > this.players[player].max) return false; //check if the player should be making a choice.
 
 		var card_names = [];
-		cards.sort(function (a, b) { return a - b; });  //indicies of cards selected (sorted into ascending order);
+		cards.sort(function (a, b) { return b - a; });  //indicies of cards selected (sorted into ascending order);
 
 		//get total value;
 		var total_value = 0;
@@ -286,13 +381,15 @@ class Game {
 		//cards add up to total and there are the correct number, give cards to the player;
 		var collected = this.played.splice(0);
 		for(var i in cards) {
-			collected.push(this.table.splice(cards[i], 1));
+			collected = collected.concat(this.table.splice(cards[i], 1));
 		}
 		
 		this.players[player].collect_cards(collected);
-
+		this.last_collected = player;
 		this.players[player].choosing = false;
+		this.check_for_scopas(player);
 		this.send_cards_to_all();
+		this.update_game_state();
 		return true;
 	}
 
@@ -332,7 +429,7 @@ class Game {
 
 	stats_to_send(player) {
 		//Gets the players round stats (how many actions, buys etc) into a format that is good for the
-		return ["Scopas: " + this.players[player].scopas, "No. cards collected: " + this.players[player].cards.length, "No. cards in deck: " + this.deck.length];
+		return ["Scopas: " + this.players[player].scopas, "No. cards collected: " + this.players[player].cards.length, "No. cards in deck: " + this.deck.length, "Score so far: " + this.players[player].score];
 	}
 
 	pool_to_send() {
@@ -510,7 +607,9 @@ class Game {
 			order.push([p, this.players[p].score]);
 		}
 
-		order.sort(function (a, b) { return b[1] - a[1] }); //sort players in descending order based on score
+		order.sort(function (a, b) { 
+			return b[1] - a[1]
+		}); //sort players in descending order based on score
 		return order;
 	}
 

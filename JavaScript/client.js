@@ -60,7 +60,7 @@ var rect;
 var setupRun = false;
 
 function setup() {
-	console.log("setup");
+	setupRun = true;
 	screen = document.getElementById("game");
 
 	screen.width = window.innerWidth - chat_width;
@@ -76,7 +76,6 @@ function setup() {
 	screen.addEventListener("mousemove", function(event) {
 		mouseX = event.clientX - rect.left;
 		mouseY = event.clientY - rect.top;
-		draw();
 	})
 
 	game = screen.getContext("2d");
@@ -106,7 +105,7 @@ function initialise() {
 		}
 	});
 	end_button.disabled = true;
-	unexpected_button = new Button(width/2 - 100, 2/3 * height - 50, 200, 100, "Back to game selection", 255, function() { //Returning to gameselection
+	unexpected_button = new Button(width/2 - 100, 2/3 * height - 50, 200, 100, "New Game", 255, function() { //Returning to gameselection
 		if(unexpected_over) {
 			socket.emit('new', 'new game pls');
 		}
@@ -183,6 +182,7 @@ function draw() {
 		game.fillRect(0, 0, width, height);
 		game.globalAlpha = 1;
 	}
+
 }
 
 function draw_grid() {
@@ -200,7 +200,7 @@ function draw_grid() {
 	game.font = font(text_med);
 	game.fillText('Stats', width/16, height * 25/32);
 	game.fillStyle = "#aaaaaa";
-	game.fillText('Played Cards', width/2, 5 * height/8)
+	game.fillText('Played Card', width/2, 5 * height/8)
 	game.fillStyle = "#000000";
 	game.font = font(text_sml);
 	game.textAlign = "left";
@@ -243,7 +243,7 @@ function mouseReleased(event) {
 		for(i in hand) {
 			if(hand[i].pressed() && !choosing) {
 				make_move({type: "hand", index: i});
-				return;
+				break;
 			}
 		}
 		for(i in pool) {
@@ -257,7 +257,7 @@ function mouseReleased(event) {
 					total_value += pool[i].value;
 					num_selected ++;
 				}
-				return;
+				break;
 			}
 		}
 	}
@@ -296,7 +296,6 @@ socket.on('unexpected', function() {
 	//game ends unexpectedly
 	unexpected_over = true;
 	in_game = false;
-	console.log("unexpected");
 	draw();
 });
 
@@ -304,27 +303,23 @@ socket.on('over', function() {
 	//game is over
 	over = true;
 	in_game = false;
-	console.log("over");
 	draw();
 });
 
 socket.on('started', function() {
 	//game has started
 	started = true;
-	console.log("started");
 	draw();
 });
 
 socket.on('reset', function() {
 	//client should be reset
 	reset();
-	console.log("reset");
 	draw();
 });
 
 socket.on('turn', function(val) {
 	turn = val;
-	console.log("turn");
 	draw();
 });
 
@@ -335,7 +330,6 @@ socket.on('new', function() {
 	unexpected_over = false;
 	in_game = true;
 	document.getElementById("player_log").textContent = "";
-	console.log("new");
 	if(!setupRun) {
 		setup();
 	}
@@ -414,7 +408,7 @@ socket.on('choose', function(data) {
 	total_value = 0;
 	num_selected = 0;
 	prev_phase = end_button.text;
-	end_button.text = "End " + data.type;
+	end_button.text = "Done";
 	draw();
 });
 
@@ -422,7 +416,7 @@ socket.on('choose', function(data) {
 socket.on('disable', function() {
 	//Disbales end_phase button when it's not the players turn
 	end_button.disabled = true;
-	end_button.text = "Not your turn";
+	end_button.text = "";
 	draw();
 });
 
@@ -504,11 +498,8 @@ class Card {
 			game.fillRect(this.x, this.y, this.w, this.h);
 			game.strokeRect(this.x, this.y, this.w, this.h);
 		}
-		if(this.pressed()) {
-			game.fillStyle = "#aaaaaa";
-		} else {
-			game.fillStyle = brighten(this.colour, 50);
-		}
+		
+		game.fillStyle = brighten(this.colour, 50);
 		
 		game.fillRect(this.x + 5, this.y + 5, this.w - spc, this.h - spc);
 		game.fillStyle = "#323232";

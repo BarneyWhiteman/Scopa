@@ -147,4 +147,16 @@ function remove_game(id) {
     console.log("game" + game_id + " has been removed");
 }
 
+var game_over = function(id) {
+    //game is over, remove players from players list and add them back to the pending list
+    for(var p in games[id].players) {
+        var socket = games[id].players[p].socket;
+        players.splice(players.indexOf([socket, id]), 1);
+        emit_to_player(socket, 'reset', 'game over');
+    }
+    remove_game(id);
+
+}
+
 exports.emit_to_player = emit_to_player;
+exports.game_over = game_over;

@@ -63,22 +63,28 @@ class Player {
 
 		score["num_cards"] = this.cards.length;
 		score["scopas"] = this.scopas;
-		score["seven"] = 0;
+		score["seven"] = false;
 
 		for(var c in this.cards) {
 			if(this.cards[c].suit == "Suns") {
 				score["suns"] += 1;
 				if(this.cards[c].value == 7) {
-					score["seven"] = 1;
+					score["seven"] = true;
 				}
 			}
-			prime[this.cards[c].suit] = max(prime[this.cards[c].suit], this.cards[c].points);
+			prime[this.cards[c].suit] = Math.max(prime[this.cards[c].suit], this.cards[c].score);
 		}
 
-		score["prime"] = prime;
+		var total_prime = 0;
+		for(var p in prime) {
+			total_prime += prime[p];
+		}
+		score["prime"] = total_prime;
 
 		return score;
 	}
+
+
 }
 
 module.exports = Player;
