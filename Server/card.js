@@ -15,7 +15,7 @@ class Card {
         for(var i = 1; i <= 10; i ++) {
             deck.push(new Card(i, "Suns", scores[i], colours["Suns"]));
             deck.push(new Card(i, "Cups", scores[i], colours["Cups"]));
-            deck.push(new Card(i, "Feathers", scores[i], colours["Feathers"]));
+            deck.push(new Card(i, "Clubs", scores[i], colours["Clubs"]));
             deck.push(new Card(i, "Swords", scores[i], colours["Swords"]));
         }
 
@@ -39,7 +39,7 @@ scores = {
 colours = {
     "Suns": "#ffa500",
     "Cups": "#00c403",
-    "Feathers": "#bc1c1c",
+    "Clubs": "#bc1c1c",
     "Swords": "#323232"
 }
 

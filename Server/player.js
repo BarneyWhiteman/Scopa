@@ -56,7 +56,7 @@ class Player {
 
 		var prime = {
 			"Suns": 0,
-			"Feathers": 0,
+			"Clubs": 0,
 			"Swords": 0,
 			"Cups": 0
 		};
@@ -64,6 +64,7 @@ class Player {
 		score["num_cards"] = this.cards.length;
 		score["scopas"] = this.scopas;
 		score["seven"] = false;
+		score["suns"] = 0;
 
 		for(var c in this.cards) {
 			if(this.cards[c].suit == "Suns") {
@@ -80,10 +81,23 @@ class Player {
 			total_prime += prime[p];
 		}
 		score["prime"] = total_prime;
+		score["raw"] = prime;
 
 		return score;
 	}
 
+	get_score_text() {
+		var score = this.calc_score();
+		console.log(score);
+		var text = this.name + ": Had " + score.num_cards + " cards, " + score.suns + " of which were Suns\n. They did ";
+		if(!score.seven) {
+			text += "not ";
+		}
+		text += "collect the 7 of Suns\n. The primiera break-down was Suns: " + score.raw.Suns + ", Clubs: " + score.raw.Clubs + ", Swords: " + score.raw.Swords + ", and Cups: " + score.raw.Cups;
+		text += " for a total of " + score.prime + " primiera points.\n" + score.scopas + " Scopa(s) were collected"; 
+
+		return text;
+	}
 
 }
 

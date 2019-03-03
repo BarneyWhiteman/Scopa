@@ -26,6 +26,7 @@ var revealed_cards = [];
 
 var turn = false;
 
+var player_name = ""; 
 
 var tl = 10;
 
@@ -113,7 +114,7 @@ function initialise() {
 
 	icons = {
 		"Suns": loadImage('/HTML/images/suns.png'),
-		"Feathers": loadImage('/HTML/images/feathers.png'),
+		"Clubs": loadImage('/HTML/images/feathers.png'),
 		"Cups": loadImage('/HTML/images/cups.png'),
 		"Swords": loadImage('/HTML/images/swords.png')
 	}
@@ -195,15 +196,22 @@ function draw_grid() {
 	line(0, height - height/4, width, height - height/4);
 	//PLAYED
 	line(0, height/2, width, height/2);
-	
-	game.fillStyle = "#000000";
 	game.font = font(text_med);
-	game.fillText('Stats', width/16, height * 25/32);
+
 	game.fillStyle = "#aaaaaa";
 	game.fillText('Played Card', width/2, 5 * height/8)
 	game.fillStyle = "#000000";
-	game.font = font(text_sml);
+	
 	game.textAlign = "left";
+	if(turn) {
+		game.fillStyle = "#00ff00";
+		game.fillText("Your turn", 5, height * 25/32)
+	} else {
+		game.fillStyle = "#ff0000";
+		game.fillText("Not your turn", 5, height * 25/32)
+	}
+	game.font = font(text_sml);
+	game.fillStyle = "#000000";
 	for(var i in current_stats) {
 		game.fillText(current_stats[i], 5, 13/16 * height + i * text_med);
 	}
@@ -323,8 +331,9 @@ socket.on('turn', function(val) {
 	draw();
 });
 
-socket.on('new', function() {
+socket.on('new', function(player_id) {
 	//joined a game
+	player_name = "Player" + player_id;
 	started = false;
 	over = false;
 	unexpected_over = false;

@@ -43,6 +43,7 @@ class Game {
 			if(this.deck.length == 0) {
 				if(this.table.length != 0) {
 					this.players[this.last_collected].collect_cards(this.table);
+					this.send_cards_to_all();
 				}
 				this.calc_scores();
 				if(this.game_over()) {
@@ -111,26 +112,29 @@ class Game {
 
 	calc_scores() {
 		var stats = [];
+		var text = [];
 		for(var p in this.players) {
 			stats.push(this.players[p].calc_score());
+			text.push(this.players[p].get_score_text());
 		}
+		console.log(stats);
 		var scores = [stats[0].scopas, stats[1].scopas];
 		//Num Cards
-		if(stats[0].num_cards > stats[1].num_cards && stats[0].num_cards != stats[0].num_cards) scores[0] += 1;
+		if(stats[0].num_cards > stats[1].num_cards && stats[0].num_cards != stats[1].num_cards) scores[0] += 1;
 		else scores[1] += 1;
 		//Seven
 		if(stats[0].seven) scores[0] += 1;
 		else scores[1] += 1;
 		//Suns
-		if(stats[0].suns > stats[1].suns && stats[0].suns != stats[0].suns) scores[0] += 1;
+		if(stats[0].suns > stats[1].suns && stats[0].suns != stats[1].suns) scores[0] += 1;
 		else scores[1] += 1;
 		//Prime
-		if(stats[0].prime > stats[1].prime && stats[0].prime != stats[0].prime) scores[0] += 1;
+		if(stats[0].prime > stats[1].prime && stats[0].prime != stats[1].prime) scores[0] += 1;
 		else scores[1] += 1;
 
 		this.players[0].add_score(scores[0]);
 		this.players[1].add_score(scores[1]);
-		this.alert_all_players("Round over.\nScores:\nPlayer0: " + scores[0] + "\nPlayer1: " + scores[1]);
+		this.alert_all_players("Round over.\nScores:\nPlayer0: " + scores[0] + "\nPlayer1: " + scores[1] + "\n\nDetails:\n" + text[0] + "\n\n" + text[0]);
 	}
 
 	start_game() {
@@ -159,7 +163,7 @@ class Game {
 			var name = "Player" + (this.players.length - 1);
 			this.players[this.players.length -1 ].set_name(name);
 			server.emit_to_player(socket, 'test', 'game' + this.game_id);
-			server.emit_to_player(socket, 'new', 'new game beginning');
+			server.emit_to_player(socket, 'new', this.players.length - 1);
 		}
 		
 		console.log(socket + ' has joined game' + this.game_id);
@@ -222,7 +226,7 @@ class Game {
 		if(move.type == "hand") {
 			var card = this.players[player].play_card(move.index);
 
-			this.send_to_log(player, ": played the " + this.get_card_name(card));
+			this.send_to_log(player, ": played the " + this.get_card_name(card) + "\n");
 
 			
 			this.played.push(card);
@@ -257,6 +261,7 @@ class Game {
 
 		if(exact_matches.length == 1) {
 			//force player's choice
+			this.send_to_log(player, ": collected the " + this.get_card_name(this.table[exact_matches[0]]));
 			this.players[player].collect_cards([this.table[exact_matches[0]], this.played[0]]); //give player cards
 			this.table.splice(exact_matches[0], 1); //remove card from table
 			this.played = [];
@@ -284,8 +289,8 @@ class Game {
 				var collected = [];
 				for(var i in additions[0]) {
 					collected = collected.concat(this.table.splice(additions[0][i].index, 1));
+					this.send_to_log(player, ": collected the " + this.get_card_name(collected[collected.length - 1]));
 				}
-
 				collected.push(this.played[0]);
 				this.players[player].collect_cards(collected);
 				this.played = [];
@@ -382,6 +387,7 @@ class Game {
 		var collected = this.played.splice(0);
 		for(var i in cards) {
 			collected = collected.concat(this.table.splice(cards[i], 1));
+			this.send_to_log(player, ": collected the " + this.get_card_name(collected[collected.length - 1]));
 		}
 		
 		this.players[player].collect_cards(collected);
@@ -429,7 +435,12 @@ class Game {
 
 	stats_to_send(player) {
 		//Gets the players round stats (how many actions, buys etc) into a format that is good for the
-		return ["Scopas: " + this.players[player].scopas, "No. cards collected: " + this.players[player].cards.length, "No. cards in deck: " + this.deck.length, "Score so far: " + this.players[player].score];
+		var stats = ["Scopas: " + this.players[player].scopas];
+		stats.push("No. cards collected: " + this.players[player].cards.length);
+		stats.push("No. cards in deck: " + this.deck.length);
+		stats.push("Score so far: " + this.players[player].score);
+		stats.push("Opp. score  : " + this.players[(player + 1) % this.players.length].score);
+		return stats;
 	}
 
 	pool_to_send() {
