@@ -40,7 +40,7 @@ colours = {
     "Suns": "#ffa500",
     "Cups": "#00c403",
     "Clubs": "#bc1c1c",
-    "Swords": "#323232"
+    "Swords": "#0065ff"
 }
 
 module.exports = Card;

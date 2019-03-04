@@ -8,8 +8,14 @@
     <link rel="stylesheet" type="text/css" href="../CSS/styles.css">
   </head>
   <body onload="setup()">
-    <textarea id="player_log" disabled>
-    </textarea>
+    <div style="float: left">
+      <textarea id="player_log" disabled></textarea>
+      <br>
+      <textarea id="chat" disabled></textarea>
+      <form style="width: 100%" id="chat_message" onsubmit="return send_chat_message(event)">
+        <input id="message" autocomplete="off"/><button id="submit">Send</button>
+      </form>
+    </div>
     <canvas id="game" width="200" height="200"></canvas>
   </body>
 </html>

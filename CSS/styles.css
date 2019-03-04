@@ -1,15 +1,31 @@
 #player_log {
-    height: 100%;
-    width: 300px;
-    overflow: scroll;
-    font-size: 110%;
-    resize:none;
-  }
+  height: 50%;
+  width: 300px;
+  overflow: scroll;
+  font-size: 110%;
+  resize:none;
+}
 
-  ::selection {
-    background: transparent; /*Makes selection invisible*/
-  }
+#chat {
+  height: 40%;
+  width: 300px;
+  overflow: scroll;
+  font-size: 110%;
+  resize:none;
+}
 
-  ::-moz-selection { /*Makes selection invisible*/
-    background: transparent;
-  }
+#message {
+  width: 79%;
+}
+
+#submit {
+  width: 20%;
+}
+
+::selection {
+  background: transparent; /*Makes selection invisible*/
+}
+
+::-moz-selection { /*Makes selection invisible*/
+  background: transparent;
+}

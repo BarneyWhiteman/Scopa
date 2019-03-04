@@ -41,9 +41,9 @@ io.on('connection', function(socket) {
         
     socket.on('new', function() {
         //player has selected which games to play, add them to a game or create a new one
-        remove_player_from_game(socket.id, get_players_game_index(socket.id));
+        //remove_player_from_game(socket.id, get_players_game_index(socket.id));
         emit_to_player(socket.id, 'reset', 'new game');
-        //add_player_to_game(socket.id);
+        add_player_to_game(socket.id);
     });
 
 
@@ -54,13 +54,17 @@ io.on('connection', function(socket) {
         if(index != -1) { games[index].make_move(socket.id, move); }
     });
 
+    socket.on('chat', function(message) {
+       games[get_players_game_index(socket.id)].chat(socket.id, message);
+    });
+
     socket.on('disconnect', function() {
         //Remove player from game
         var index = get_players_game_index(socket.id);
 
         console.log(socket.id + " disconnected: " + index);
         
-        remove_player_from_game(socket.id, index);
+        player_disconnected();
         
         console.log(players);
 
@@ -85,9 +89,19 @@ http.listen(port, function(){
 
 function remove_player_from_game(id, index) {
     if(index != -1) {
-        //remove from game object
         games[index].remove_player(id);
-        players.splice(players.indexOf([id, games[index].game_id]), 1);
+    }
+}
+
+function player_disconnected() {
+    var current_players = Object.keys(io.sockets.sockets);
+    for(var p = players.length - 1; p >= 0; p --) {
+        if(current_players.indexOf(players[p][0]) === -1) {
+            var old = players.splice(p, 1)[0];
+            try {
+                games[old[1]].remove_player(old[0]);
+            } catch(e) {}
+        }
     }
 }
 
@@ -120,6 +134,8 @@ function add_player_to_game(id) {
     if(!added) {
         var game_id = 0;
         if(games.length != 0) { game_id = games[games.length - 1].game_id + 1; }
+        
+        console.log("adding new game with id: " + game_id);
         games.push(new Game(game_id));
         games[games.length - 1].add_player(id);
         players.push([id, game_id]);
@@ -139,10 +155,13 @@ function get_players_game_index(id) {
     return -1;
 }
 
-function remove_game(id) {
+function remove_game(index) {
     //remove game from list of available games
-    var game_id = games[id].game_id;
-    games.splice(id, 1);
+    var game_id = games[index].game_id;
+    for(var p in games[index].players) {
+        remove_player_from_game(games[index].players[p].socket, index);
+    }
+    games.splice(index, 1);
     
     console.log("game" + game_id + " has been removed");
 }
@@ -156,6 +175,15 @@ var game_over = function(id) {
     }
     remove_game(id);
 
+}
+
+function print_games() {
+    for(var g in games) {
+        for(var p in games[g].players) {
+            console.log(games[g].players[p].socket);
+        }
+        console.log("");
+    }
 }
 
 exports.emit_to_player = emit_to_player;

@@ -81,6 +81,9 @@ class Game {
 		for(var p in this.players) {
 			this.players[p].new_round();
 		}
+
+		this.send_to_all_log("---New Round---");
+
 		this.new_hand();
 	}
 
@@ -117,7 +120,6 @@ class Game {
 			stats.push(this.players[p].calc_score());
 			text.push(this.players[p].get_score_text());
 		}
-		console.log(stats);
 		var scores = [stats[0].scopas, stats[1].scopas];
 		//Num Cards
 		if(stats[0].num_cards > stats[1].num_cards && stats[0].num_cards != stats[1].num_cards) scores[0] += 1;
@@ -134,7 +136,7 @@ class Game {
 
 		this.players[0].add_score(scores[0]);
 		this.players[1].add_score(scores[1]);
-		this.alert_all_players("Round over.\nScores:\nPlayer0: " + scores[0] + "\nPlayer1: " + scores[1] + "\n\nDetails:\n" + text[0] + "\n\n" + text[0]);
+		this.alert_all_players("Round over.\nScores:\nPlayer0: " + scores[0] + "\nPlayer1: " + scores[1] + "\n\nDetails:\n" + text[0] + "\n\n" + text[1]);
 	}
 
 	start_game() {
@@ -185,6 +187,17 @@ class Game {
 			this.inc_turn(true);
 		}
 		this.full = false;
+	}
+
+	get_player_index(id) {
+		for(var p in this.players) {
+			if(this.players[p].socket == id) return p;
+		}
+		return -1;
+	}
+
+	get_player_name(id) {
+		return this.players[this.get_player_index(id)].name;
 	}
 
 	send_cards_to_player(player) {
@@ -345,6 +358,7 @@ class Game {
 	check_for_scopas(player) {
 		if(!(this.all_hands_empty() && this.deck.length == 0) && this.table.length == 0) {
 			this.players[player].add_scopa();
+			this.send_to_log(player, ": got a Scopa!");
 		}
 	}
 
@@ -439,7 +453,7 @@ class Game {
 		stats.push("No. cards collected: " + this.players[player].cards.length);
 		stats.push("No. cards in deck: " + this.deck.length);
 		stats.push("Score so far: " + this.players[player].score);
-		stats.push("Opp. score  : " + this.players[(player + 1) % this.players.length].score);
+		stats.push("Opp. score  : " + this.players[1 - player].score);
 		return stats;
 	}
 
@@ -476,140 +490,6 @@ class Game {
 		this.emit_to_player(player, 'alert', message);
 	}
 
-	get_pool_names() {
-		var names = [];
-		for(var p in this.game_data.pools.random) {
-			names.push(this.game_data.pools.random[p].name);
-		}
-		return names;
-	}
-
-	deal_damage(player, amount) {
-		//deals damage to all players except "player";
-		for(var p in this.players) {
-			if(p == player) continue;
-			this.players[p].deal_damage(amount);
-		}
-	}
-
-	draw_pool_card(pool) {
-		//draws from the pool deck into the specified pool (if eligable);
-		if(this.pools[pool].type != "dealt") return;
-		var num = this.pools[pool].size;
-		if(num > this.pools.deck.cards.length) {
-			var temp = [];
-			var len = this.pools.deck.cards.length;
-			//draw all cards left in the deck
-			temp = temp.concat(this.pools.deck.cards.splice(0, len));
-			this.refresh_pool_deck();
-			//draw remaining cards from new deck
-			this.pools[pool].cards = temp.concat(this.pools.deck.cards.splice(0, num - len));
-		} else {
-			//take the top cards from the deck
-			this.pools[pool].cards = this.pools.deck.cards.splice(0, num);
-		}
-	}
-
-	refresh_pool_deck() {
-		//Shuffles the discard into the deck;
-		this.pools.deck.cards = helper.shuffle(this.pools.trash.cards);
-	}
-
-	initiate_pools() {
-		//Each pool is an Object with fields: name, cards, type, permanent. 
-		//Type is either random or constant based on where it is in the config
-		//Perminant is whether a card remains in the pools or is put in the hand when purchased
-		this.pools["trash"] = { "cards": [], type: "constant" };
-		//Pools that are constant (always the same set of cards)
-		if(this.game_data.pools.const != null) {
-			for(var p in this.game_data.pools.const) {
-				var single_pool = this.get_pool_array(this.game_data.pools.const[p].cards, this.game_data.pools.const[p].shuffled);
-				this.pools[this.game_data.pools.const[p].name] = { "cards": single_pool, "type": "constant" };
-				if(this.game_data.pools.const[p].permanent == true) {
-					this.pools[this.game_data.pools.const[p].name].permanent = true;
-				}
-			}
-		}
-		//Changeable, either picked by the player or random
-		if(this.game_data.pools.random != null) {
-			//Get indicies of pools to use from the random pools
-			if(this.pools_selection == "random") {
-				var random = [];
-				while (random.length < this.game_data.pools.num_random) {
-					var n = helper.rand_int(this.game_data.pools.random.length);
-					if(random.indexOf(n) == -1) {
-						random.push(n);
-					}
-				}
-				//sort random indicies
-				random.sort(function (a, b) { return a - b; });
-				this.pools_selection = random;
-			}
-			//Random pools (choose n pools from the set)
-			for(var p = 0; p < this.pools_selection.length; p++) {
-				var single_pool = this.get_pool_array(this.game_data.pools.random[this.pools_selection[p]].cards, this.game_data.pools.random[this.pools_selection[p]].shuffled);
-				this.pools[this.game_data.pools.random[this.pools_selection[p]].name] = { "cards": single_pool, "type": "random" };
-				if(this.game_data.pools.random[this.pools_selection[p]].permanent == true) {
-					this.pools[this.game_data.pools.random[this.pools_selection[p]].name].permanent = true;
-				}
-			}
-		}
-
-		if(this.game_data.pools.deck != null) {
-			var single_pool = this.get_pool_array(this.game_data.pools.deck.cards, this.game_data.pools.deck.shuffled);
-			this.pools.deck = { "cards": single_pool, "type": "deck" };
-			if(this.game_data.pools.deck.permanent == true) {
-				this.pools.deck.permanent = true;
-			}
-		}
-		if(this.game_data.pools.dealt != null) {
-			for(var p = 0; p < this.game_data.pools.dealt.num; p ++) {
-				var key = "Dealt" + p;
-				this.pools[key] = { "cards": [], "type": "dealt", "size": this.game_data.pools.dealt.size };
-				this.draw_pool_card(key);
-			}
-		}
-	}
-
-	get_pool_array(cards, shuffled) {
-		//Generates an array used for a single pool
-		var single_pool = [];
-		for(var n = 0; n < cards.length; n++) {
-			var num_cards = cards[n].count;
-			if(num_cards == null) {
-				//Used if it changes based on the number of people playing
-				num_cards = cards[n].values[this.players.length];
-			}
-			for(var i = 0; i < num_cards; i++) {
-				single_pool.push(cards[n].name);
-			}
-		}
-		if(shuffled) {
-			single_pool = helper.shuffle(single_pool);
-		}
-		return single_pool;
-	}
-
-	get_dealt_cards() {
-		var cards = [];
-		for(var p in this.pools) {
-			if(this.pools[p].type == "dealt") {
-				cards.push(this.pools[p].cards[0]);
-			}
-		}
-		return cards;
-	}
-
-	cards_JSON_to_array(cards) {
-		var temp = []; //Holds card values
-		for(var c in cards) {
-			for(var n = 0; n < cards[c].count; n++) {
-				temp.push(cards[c].name); //Add the required number of cards
-			}
-		}
-		return temp;
-	}
-
 	get_winners() {		
 		var order = []; //variable to hold all players
 		
@@ -641,27 +521,14 @@ class Game {
 		return this.pools[name].cards.length == 0;
 	}
 
-	player_has_zero_health() {
+	chat(id, message) {
+		var player = this.get_player_index(id);
+		var person = "";
 		for(var p in this.players) {
-			if(this.players[p].health <= 0) return true;
+			if(p == player) person = "You";
+			else if(player != null) person = this.players[player].name;
+			this.emit_to_player(p, 'chat', person + ": " +  message + "\n");
 		}
-		return false;
-	}
-
-	num_pool_empty() {
-		var num = 0;
-		for(var p in this.pools) {
-			if(this.pools[p].cards.length == 0) num++;
-		}
-		return num;
-	}
-
-	total_additional_points() {
-		var num = 0;
-		for(var p in this.players) {
-			num += this.players[p].points;
-		}
-		return num;
 	}
 };
 

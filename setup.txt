@@ -1,18 +1,19 @@
---------------Digital Deck Builder--------------
+---------------------Scopa---------------------
 
 1. Install node.js from https://node.js.org/en/
 
 2. Open a command window and run the command 
    "npm install" in the server directory
+	(on windows, use the "install.bat" file in the directory)
 
 3. Run the server by using the command
    "node index.js" in the server directory
+	(on windows, use the "run.bat" file in the directory)
 
-
-------------------------------------------------
+-----------------------------------------------
 
 To change the port the server is listening to
 open "/Sever/GameFiles/config.json" and change
 the port value.
 
-------------------------------------------------
+-----------------------------------------------

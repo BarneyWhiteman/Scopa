@@ -295,6 +295,10 @@ socket.on('test', function(message) {
 	draw();
 });
 
+socket.on('chat', function(message) {
+	document.getElementById("chat").textContent = message + "\n" + document.getElementById("chat").textContent;
+});
+
 socket.on('pause', function(pause) {
     paused = pause;
 	draw();
@@ -435,6 +439,16 @@ socket.on('alert', function(message) {
 	draw();
 });
 
+function send_chat_message(e) {
+	console.log("here");
+	console.log(e);
+	e.preventDefault();
+	if(document.getElementById("message").value != "") {
+		socket.emit('chat', document.getElementById("message").value);
+		document.getElementById("message").value = "";
+	}
+}
+
 function end_choosing() {
 	if(num_selected >= choose_min && num_selected <= choose_max && total_value == choose_value) {
 		var selected = [];
@@ -565,7 +579,9 @@ class Button {
 }
 
 function reset() {
-	document.getElementById("player_log").innerHTML = "";
+	document.getElementById("player_log").textContent = "";
+	document.getElementById("chat").textContent = "";
+	document.getElementById("message").value = "";
 	socket = io();
 	hand = [];
 	played = [];

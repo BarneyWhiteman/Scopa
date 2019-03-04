@@ -88,7 +88,6 @@ class Player {
 
 	get_score_text() {
 		var score = this.calc_score();
-		console.log(score);
 		var text = this.name + ": Had " + score.num_cards + " cards, " + score.suns + " of which were Suns\n. They did ";
 		if(!score.seven) {
 			text += "not ";
