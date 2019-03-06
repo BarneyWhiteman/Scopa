@@ -60,6 +60,9 @@ var rect;
 
 var setupRun = false;
 
+var name = "";
+var named = false;
+
 function setup() {
 	setupRun = true;
 	screen = document.getElementById("game");
@@ -108,7 +111,8 @@ function initialise() {
 	end_button.disabled = true;
 	unexpected_button = new Button(width/2 - 100, 2/3 * height - 50, 200, 100, "New Game", 255, function() { //Returning to gameselection
 		if(unexpected_over) {
-			socket.emit('new', 'new game pls');
+			socket.emit('reconnect', name);
+			reset();
 		}
 	});
 
@@ -295,8 +299,18 @@ socket.on('test', function(message) {
 	draw();
 });
 
+socket.on('connected', function() {
+	console.log("connected!");
+	document.getElementById("naming").style.display = "block";
+	document.getElementById("game_div").style.display = "none";
+	if(named) {
+		document.getElementById("name").value = name;
+	}
+})
+
 socket.on('chat', function(message) {
-	document.getElementById("chat").textContent = message + "\n" + document.getElementById("chat").textContent;
+	document.getElementById("chat").textContent = document.getElementById("chat").textContent  + "\n" + message;
+	document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
 });
 
 socket.on('pause', function(pause) {
@@ -307,13 +321,6 @@ socket.on('pause', function(pause) {
 socket.on('unexpected', function() {
 	//game ends unexpectedly
 	unexpected_over = true;
-	in_game = false;
-	draw();
-});
-
-socket.on('over', function() {
-	//game is over
-	over = true;
 	in_game = false;
 	draw();
 });
@@ -440,13 +447,27 @@ socket.on('alert', function(message) {
 });
 
 function send_chat_message(e) {
-	console.log("here");
-	console.log(e);
 	e.preventDefault();
 	if(document.getElementById("message").value != "") {
 		socket.emit('chat', document.getElementById("message").value);
 		document.getElementById("message").value = "";
 	}
+}
+
+function set_name(e) {
+	e.preventDefault();
+	if(document.getElementById("name").value != "") {
+		named = true;
+		socket.emit('new', document.getElementById("name").value);
+		name = document.getElementById("name").value;
+		document.getElementById("name").value = "";
+
+		document.getElementById("naming").style.display = "none";
+		document.getElementById("game_div").style.display = "block";
+	} else {
+		alert("Please choose a name");
+	}
+	setup();
 }
 
 function end_choosing() {
@@ -602,6 +623,7 @@ function reset() {
 	open_games = false;
 
 	initialise();
+	draw();
 }
 
 function font(size) {
@@ -639,4 +661,72 @@ function constrain(val, min, max) {
 		return min;
 	}
 	return val;
+}
+
+var message_cursor_start = -1;
+var message_cursor_end = -1;
+
+function set_message_focus() {
+	document.getElementById("message").focus();
+}
+
+function insert_emoji_into_chat(emoji) {
+	var message = document.getElementById("message");
+	close_emoji_window();
+	//need to store the message window cursor location somehow
+	if(message_cursor_start == -1 && message_cursor_end == -1) {
+		message.value += emojis[emoji];
+	} else {
+		var start = message.value.slice(0, message_cursor_start);
+		var end = message.value.slice(message_cursor_end);
+		message.value = start + emojis[emoji] + end;
+	}
+}
+
+function populate_emoji_window() {
+	console.log("populated");
+	var emoji_window = document.getElementById("emoji_window");
+	for(var e in emojis) {
+		emoji_window.innerHTML += "<button onclick=\"insert_emoji_into_chat("+e+")\">" + emojis[e] + "</button>";
+	}
+}
+
+function open_emoji_window() {
+	get_selected_text();
+	var emoji_window = document.getElementById("emoji_window");
+	if(emoji_window.innerHTML == "") {
+		populate_emoji_window();
+	}
+	if(emoji_window.style.display == "block") {
+		close_emoji_window();
+	} else {
+		emoji_window.style.display = "block";
+	}
+}
+
+function close_emoji_window() {
+	document.getElementById("emoji_window").style.display = "none";
+	set_message_focus();
+}
+
+var emojis = ["😀","😁","😂","😃","😄","😅","😆","😇","😈","😉","😊","😋","😌","😍","😎","😏","😐",
+	"😑","😒","😓","😔","😕","😖","😗","😘","😙","😚","😛","😜","😝","😞","😟","😠","😡","😢","😣","😤",
+	"😥","😦","😧","😨","😩","😪","😫","😬","😭","😮","😯","😰","😱","😲","😳","😴","😵","😶","😷","👿","💀",
+	"👆","👇","👈","👉","👊","👋","👌","👍","👎","👏","👐","🙌","🙏","✊","✋","✌",
+	"💓","💔","💕","💖","💗","💘","💙","💚","💛","💜","💝","💞","💟",
+	"🅱","🌈","🌊","🌞","🍆","🍑","🍳","🎉","🎧","🎨","🎯","🎲","🎵","🎸","🏆","🐳",
+	"👀","👂","👃","👄","👅","👑","👻","👼","👽","👾","💋","💍","💎","💐",
+	"💡","💣","💤","💥","💦","💧",
+	"💨","💩","💪","💯","💰","💲","📞","🔔","🔪","🚨","🚩","🚽","⌛","⏪","⛔","✅","❌","❗"
+];
+
+function get_selected_text() {
+	var message = document.getElementById("message");
+    if (message.selectionStart) {
+        message_cursor_start = message.selectionStart;
+        message_cursor_end = message.selectionEnd;
+    } else {
+        message_cursor_start = -1;
+        message_cursor_end = -1;
+	}
 }

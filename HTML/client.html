@@ -1,5 +1,6 @@
 <html>
   <head>
+    <meta charset='utf-8'/>
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.6.0/p5.js"></script>-->
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="../JavaScript/client.js"></script>
@@ -7,15 +8,27 @@
     <link rel="icon" href="./HTML/icon.png">
     <link rel="stylesheet" type="text/css" href="../CSS/styles.css">
   </head>
-  <body onload="setup()">
-    <div style="float: left">
-      <textarea id="player_log" disabled></textarea>
-      <br>
-      <textarea id="chat" disabled></textarea>
-      <form style="width: 100%" id="chat_message" onsubmit="return send_chat_message(event)">
-        <input id="message" autocomplete="off"/><button id="submit">Send</button>
+  <body onload="populate_emoji_window()">
+    <div id="naming">
+      <form id="name_form" onsubmit="return set_name(event)">
+        <input id="name" maxLength="20" autocomplete="off"  type="text" autofocus placeholder="Name"/>
+        <button id="join" type="submit" style="width: 50%">Join Game</button>
       </form>
     </div>
-    <canvas id="game" width="200" height="200"></canvas>
+    <div id="game_div" style="display: none">
+      <div style="float: left">
+        <textarea id="player_log" disabled></textarea>
+        <br>
+        <textarea id="chat" disabled></textarea>
+        <div>
+          <form style="width: 100%" id="chat_message" onsubmit="return send_chat_message(event)">
+            <input id="message" autocomplete="off" type="text" placeholder="Message"/>
+          </form>
+          <button id="emoji" onmousedown="open_emoji_window()" onmouseup="set_message_focus()">💩</button>
+        </div>
+        <div id="emoji_window"></div>
+      </div>
+      <canvas id="game" width="200" height="200"></canvas>
+    </div>
   </body>
 </html>

@@ -11,6 +11,7 @@ class Player {
 		this.cards = [];
 
 		this.choosing = false;
+		this.name = "";
 	}
 
 	set_name(name) {

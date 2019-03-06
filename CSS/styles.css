@@ -1,8 +1,12 @@
+body {
+  font-family: "Montserrat", sans-serif;
+}
+
 #player_log {
-  height: 50%;
+  height: 55%;
   width: 300px;
   overflow: scroll;
-  font-size: 110%;
+  font-size: 120%;
   resize:none;
 }
 
@@ -10,22 +14,115 @@
   height: 40%;
   width: 300px;
   overflow: scroll;
-  font-size: 110%;
+  font-size: 120%;
   resize:none;
 }
 
 #message {
-  width: 79%;
+  width: 250px;
+  float: left;
+  height: 3%;
+}
+#emoji {
+  width: 50px;
+  float: left;
+  height: 3%;
 }
 
-#submit {
-  width: 20%;
-}
-
-::selection {
+textarea::selection {
   background: transparent; /*Makes selection invisible*/
 }
 
-::-moz-selection { /*Makes selection invisible*/
+textarea::-moz-selection { /*Makes selection invisible*/
   background: transparent;
+}
+
+button {
+  background-color: #555555;
+  border: none;
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  border: 2px solid #555555;
+  font-size: 16px;
+  -webkit-transition-duration: 0.4s; /* Safari */
+  transition-duration: 0.4s;
+}
+button:hover {
+  background-color: white;
+  color: black;
+}
+
+textarea {
+  resize: none;
+  overflow: auto;
+}
+
+input, textarea {
+  background-color: white;
+  color: black;
+  border: 2px solid #555555;
+  outline: none;
+}
+
+#name_form {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-right: -50%;
+}
+
+#emoji_window {
+  display: none;
+  background-color: #555555;
+  color: black;
+  border: 2px solid #555555;
+  outline: none;
+  position: absolute;
+
+  height: 40%;
+  overflow: scroll;
+  width:300px;
+  top: 55%;
+  -webkit-transition-duration: 0.4s; /* Safari */
+  transition-duration: 0.4s;
+}
+
+@-webkit-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@-moz-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.fade-in {
+  opacity:0;
+  -webkit-animation:fadeIn ease-in 1;  
+  -moz-animation:fadeIn ease-in 1;
+  animation:fadeIn ease-in 1;
+
+  -webkit-animation-fill-mode:forwards;
+  -moz-animation-fill-mode:forwards;
+  animation-fill-mode:forwards;
+
+  -webkit-animation-duration:0.2s;
+  -moz-animation-duration:0.2s;
+  animation-duration:0.2s;
+}
+
+@-webkit-keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+@-moz-keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+
+.fade-out {
+  opacity:0;
+  -webkit-animation:fadeOut ease-in 1;  
+  -moz-animation:fadeOut ease-in 1;
+  animation:fadeOut ease-in 1;
+
+  -webkit-animation-fill-mode:forwards;
+  -moz-animation-fill-mode:forwards;
+  animation-fill-mode:forwards;
+
+  -webkit-animation-duration:0.2s;
+  -moz-animation-duration:0.2s;
+  animation-duration:0.2s;
 }

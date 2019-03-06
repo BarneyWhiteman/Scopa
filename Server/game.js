@@ -27,6 +27,7 @@ class Game {
 		this.turn = 0;
 
 		this.last_collected = -1;
+		this.last_message = -1;
 	}
 
 	update_game_state() {
@@ -35,16 +36,22 @@ class Game {
 			console.log(this.get_winner_text());
 			this.alert_all_players("Game over. The Winners are:\n" + this.get_winner_text() + "\n\nOnce this window is closed you will be taken to the game selection screen");
 			server.game_over(this.game_id);
-			this.emit_to_all_players("over", "gameover");
 			return;
 		}
 
-		if(this.all_hands_empty()) {
+		if(this.all_hands_empty() && ! this.player_choosing()) {
 			if(this.deck.length == 0) {
 				if(this.table.length != 0) {
+					console.log("last cards collected by " + this.players[this.last_collected].name);
 					this.players[this.last_collected].collect_cards(this.table);
+					this.send_to_log(this.last_collected, ": last to pick-up and gets the remaining cards\n");
+					for(var c in this.table) {
+						this.send_to_log(this.last_collected, ": collected " + this.get_card_name(this.table[c]));
+					}
+					this.table = [];
 					this.send_cards_to_all();
 				}
+				
 				this.calc_scores();
 				if(this.game_over()) {
 					this.update_game_state();
@@ -92,6 +99,9 @@ class Game {
 		for(var p in this.players) {
 			this.players[p].deal_cards(this.deck.splice(0, 3));
 		}
+		if(this.deck.length == 0) {
+			this.send_to_all_log("---Last Cards!---");
+		}
 		this.send_cards_to_all();
 	}
 
@@ -102,6 +112,15 @@ class Game {
 			}
 		}
 		return true;
+	}
+
+	player_choosing() {
+		for(var p in this.players) {
+			if(this.players[p].choosing) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	game_over() {
@@ -136,13 +155,12 @@ class Game {
 
 		this.players[0].add_score(scores[0]);
 		this.players[1].add_score(scores[1]);
-		this.alert_all_players("Round over.\nScores:\nPlayer0: " + scores[0] + "\nPlayer1: " + scores[1] + "\n\nDetails:\n" + text[0] + "\n\n" + text[1]);
+		this.alert_all_players("Round over.\nScores:\n" + this.players[0].name + ": " + scores[0] + "\n" + this.players[1].name + ": " + scores[1] + "\n\nDetails:\n" + text[0] + "\n\n" + text[1]);
 	}
 
 	start_game() {
 			this.started = true;
 
-			this.emit_to_all_players('reset', 'the game has now begun');
 			this.emit_to_all_players('started', 'the game has now begun');
 			
 			this.send_to_all_log("A new game has started");
@@ -152,23 +170,22 @@ class Game {
 
 			this.alert_player(this.turn, 'It is now your turn!');
 			this.for_each_other_player(this.turn, function(game, player) {
-				game.alert_player(player, "You are player " + player + ".\n\nPlayer " + game.turn + 
-				" is starting the game. It will be your turn in just a moment!");
+				console.log("alerted" + player);
+				game.alert_player(player, this.players[game.turn].name + " is starting the game. It will be your turn in just a moment!");
 			});
 			console.log('Game is ready to begin!');		
 	}
 
-	add_player(socket) {
+	add_player(socket, name) {
 		if(socket == null || socket == undefined) { return; }
 		if(this.players.length < this.max_players) {
 			this.players.push(new player(socket));
-			var name = "Player" + (this.players.length - 1);
 			this.players[this.players.length -1 ].set_name(name);
 			server.emit_to_player(socket, 'test', 'game' + this.game_id);
 			server.emit_to_player(socket, 'new', this.players.length - 1);
 		}
 		
-		console.log(socket + ' has joined game' + this.game_id);
+		console.log(name + "(" + socket + ') has joined game' + this.game_id);
 		this.send_to_log(this.players.length - 1, ": joined game" + this.game_id);
 	
 		if(this.players.length == this.max_players) {
@@ -254,6 +271,7 @@ class Game {
 				this.inc_turn();
 			}
 		}
+		this.send_cards_to_all();
 		this.update_game_state();
 	}
 
@@ -495,7 +513,7 @@ class Game {
 		
 		//winner is based on points scored
 		for(var p in this.players) {
-			order.push([p, this.players[p].score]);
+			order.push([this.players[p].name, this.players[p].score]);
 		}
 
 		order.sort(function (a, b) { 
@@ -508,7 +526,7 @@ class Game {
 		var win = this.get_winners();
 		var text = "";
 		for(var w = 0; w < win.length; w ++) {
-			text += (w + 1) + ". Player" + win[w][0] + " has " + win[w][1] + " points\n";
+			text += (w + 1) + ". " + win[w][0] + " has " + win[w][1] + " points\n";
 		}
 		return text;
 	}
@@ -527,8 +545,12 @@ class Game {
 		for(var p in this.players) {
 			if(p == player) person = "You";
 			else if(player != null) person = this.players[player].name;
-			this.emit_to_player(p, 'chat', person + ": " +  message + "\n");
+			if(player != this.last_message) {
+				this.emit_to_player(p, 'chat', "\n" + person + ":");
+			}
+			this.emit_to_player(p, 'chat', "> " + message);
 		}
+		this.last_message = player;
 	}
 };
 
