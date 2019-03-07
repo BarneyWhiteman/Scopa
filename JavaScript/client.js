@@ -63,6 +63,8 @@ var setupRun = false;
 var name = "";
 var named = false;
 
+var alert_open = false;
+
 function setup() {
 	setupRun = true;
 	screen = document.getElementById("game");
@@ -244,6 +246,8 @@ function draw_unexpected() {
 }
 
 function mouseReleased(event) {
+
+	if(alert_open) return;
 
 	if(started &&  end_button.pressed()) { end_button.func(); return; }
 
@@ -442,7 +446,7 @@ socket.on('disable', function() {
 
 socket.on('alert', function(message) {
 	//Alerts players (used for start/end of turn)
-	alert(message);
+	open_alert(message);
 	draw();
 });
 
@@ -465,7 +469,7 @@ function set_name(e) {
 		document.getElementById("naming").style.display = "none";
 		document.getElementById("game_div").style.display = "block";
 	} else {
-		alert("Please choose a name");
+		open_alert("Please choose a name!");
 	}
 	setup();
 }
@@ -486,12 +490,12 @@ function end_choosing() {
 		return true;
 	} else {
 		if(total_value != choose_value) {
-			alert("Please choose card(s) that have a combined value of " + choose_value);
+			open_alert("Please choose card(s) that have a combined value of " + choose_value);
 		}
 		if(choose_min == choose_max) {
-			alert("Please choose " + choose_min + " card(s) that have a combined value of " + choose_value);
+			open_alert("Please choose " + choose_min + " card(s) that have a combined value of " + choose_value);
 		} else {
-			alert("Please choose between " + choose_min + " and " + choose_max + " cards that have a combined value of " + choose_value);
+			open_alert("Please choose between " + choose_min + " and " + choose_max + " cards that have a combined value of " + choose_value);
 		}
 		return false;
 	}
@@ -729,4 +733,20 @@ function get_selected_text() {
         message_cursor_start = -1;
         message_cursor_end = -1;
 	}
+}
+
+function open_alert(message) {
+	message = message.replace('\n', '<br/>');
+	console.log(message);
+
+	var alert = document.getElementById("popup");
+	alert.style.display = "block";
+	document.getElementById("alert").innerHTML = message;
+	alert_open = true;
+}
+
+function close_alert() {
+	var alert = document.getElementById("popup");
+	alert.style.display = "none";
+	alert_open = false;
 }

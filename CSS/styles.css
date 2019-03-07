@@ -29,6 +29,16 @@ body {
   height: 3%;
 }
 
+#popup {
+  padding: 50px;
+  background: #c3d4d4;
+  position: absolute;
+  margin: 10% 25%;
+  width: 50%;
+  height: auto;
+  text-align: center;
+}
+
 textarea::selection {
   background: transparent; /*Makes selection invisible*/
 }
