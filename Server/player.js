@@ -89,12 +89,12 @@ class Player {
 
 	get_score_text() {
 		var score = this.calc_score();
-		var text = this.name + ": Had " + score.num_cards + " cards, " + score.suns + " of which were Suns\n. They did ";
+		var text = this.name + ": Had " + score.num_cards + " cards, " + score.suns + " of which were Suns<br/>. They did ";
 		if(!score.seven) {
 			text += "not ";
 		}
-		text += "collect the 7 of Suns\n. The primiera break-down was Suns: " + score.raw.Suns + ", Clubs: " + score.raw.Clubs + ", Swords: " + score.raw.Swords + ", and Cups: " + score.raw.Cups;
-		text += " for a total of " + score.prime + " primiera points.\n" + score.scopas + " Scopa(s) were collected"; 
+		text += "collect the 7 of Suns<br/>. The primiera break-down was Suns: " + score.raw.Suns + ", Clubs: " + score.raw.Clubs + ", Swords: " + score.raw.Swords + ", and Cups: " + score.raw.Cups;
+		text += " for a total of " + score.prime + " primiera points.<br/>" + score.scopas + " Scopa(s) were collected"; 
 
 		return text;
 	}

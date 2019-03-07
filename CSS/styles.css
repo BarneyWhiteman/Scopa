@@ -33,10 +33,21 @@ body {
   padding: 50px;
   background: #c3d4d4;
   position: absolute;
-  margin: 10% 25%;
-  width: 50%;
+  margin: 10% 35%;
+  width: 30%;
   height: auto;
-  text-align: center;
+  border-radius: 10px;
+  z-index: 201;
+}
+
+#popup_overlay {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.6);
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
 }
 
 textarea::selection {
@@ -58,6 +69,7 @@ button {
   font-size: 16px;
   -webkit-transition-duration: 0.4s; /* Safari */
   transition-duration: 0.4s;
+  border-radius: 5px;
 }
 button:hover {
   background-color: white;
@@ -74,6 +86,7 @@ input, textarea {
   color: black;
   border: 2px solid #555555;
   outline: none;
+  border-radius: 5px;
 }
 
 #name_form {
@@ -97,6 +110,10 @@ input, textarea {
   top: 55%;
   -webkit-transition-duration: 0.4s; /* Safari */
   transition-duration: 0.4s;
+}
+
+#emoji_window > button {
+  font-size: 200% !important;
 }
 
 @-webkit-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }

@@ -30,10 +30,12 @@
       </div>
       <canvas id="game" width="200" height="200"></canvas>
     </div>
-    <div id="popup" style="display:none;">
-      <h3 id="title">Alert</h3>
-      <p id="alert">Message</p>
-      <button id="close" onclick="close_alert()">Close</button>
+    <div id="popup_wrapper" style="display:none;">
+      <div id="popup_overlay"></div>
+      <div id="popup">
+        <p id="alert">Message</p>
+        <button id="close" onclick="close_alert()">Close</button>
+      </div>
     </div>
   </body>
 </html>

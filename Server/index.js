@@ -72,8 +72,8 @@ io.on('connection', function(socket) {
             if(games[index].started) {
                 //Too few people to continue the game
                 //Let anyone still on the server know
-                emit_to_each_player_in_game(index, 'unexpected', 'too few players');
                 console.log("game" + games[index].game_id + " had too few players and is shutting");
+                emit_to_each_player_in_game(index, 'unexpected', 'too few players');
             }
             //Remove game
             game_over(index);

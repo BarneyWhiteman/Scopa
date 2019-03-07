@@ -34,7 +34,7 @@ class Game {
 		if(this.started && this.game_over()) {
 			console.log("game over");
 			console.log(this.get_winner_text());
-			this.alert_all_players("Game over. The Winners are:\n" + this.get_winner_text() + "\n\nOnce this window is closed you will be taken to the game selection screen");
+			this.alert_all_players("Game over. The Winners are:<br/>" + this.get_winner_text() + "<br/><br/>Once this window is closed you will be taken to the game selection screen");
 			server.game_over(this.game_id);
 			return;
 		}
@@ -155,7 +155,7 @@ class Game {
 
 		this.players[0].add_score(scores[0]);
 		this.players[1].add_score(scores[1]);
-		this.alert_all_players("Round over.\nScores:\n" + this.players[0].name + ": " + scores[0] + "\n" + this.players[1].name + ": " + scores[1] + "\n\nDetails:\n" + text[0] + "\n\n" + text[1]);
+		this.alert_all_players("Round over.<br/>Scores:<br/>" + this.players[0].name + ": " + scores[0] + "<br/>" + this.players[1].name + ": " + scores[1] + "<br/><br/>Details:<br/>" + text[0] + "<br/><br/>" + text[1]);
 	}
 
 	start_game() {
@@ -526,7 +526,7 @@ class Game {
 		var win = this.get_winners();
 		var text = "";
 		for(var w = 0; w < win.length; w ++) {
-			text += (w + 1) + ". " + win[w][0] + " has " + win[w][1] + " points\n";
+			text += (w + 1) + ". " + win[w][0] + " has " + win[w][1] + " points<br/>";
 		}
 		return text;
 	}
