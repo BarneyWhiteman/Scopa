@@ -24,6 +24,8 @@ var prev_button_state = true;
 
 var revealed_cards = [];
 
+var alert_queue = [];
+
 var turn = false;
 
 var player_name = ""; 
@@ -733,9 +735,18 @@ function get_selected_text() {
 	}
 }
 
+
 function open_alert(message) {
-	message = message.replace('\n', '<br/>');
-	console.log(message);
+	if(message != null) {
+		message = message.replace('\n', '<br/>');
+		console.log(message);
+		alert_queue.push(message);
+	}
+	if(alert_open || alert_queue.length == 0) return;
+
+	message = alert_queue.pop();
+
+	console.log(alert_queue);
 
 	var alert = document.getElementById("popup_wrapper");
 	alert.style.display = "block";
@@ -747,4 +758,5 @@ function close_alert() {
 	var alert = document.getElementById("popup_wrapper");
 	alert.style.display = "none";
 	alert_open = false;
+	open_alert();
 }

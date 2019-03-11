@@ -34,7 +34,7 @@ class Game {
 		if(this.started && this.game_over()) {
 			console.log("game over");
 			console.log(this.get_winner_text());
-			this.alert_all_players("Game over. The Winners are:<br/>" + this.get_winner_text() + "<br/><br/>Once this window is closed you will be taken to the game selection screen");
+			this.alert_all_players("Game over. The Winners are:<br/>" + this.get_winner_text() + "<br/>Once this window is closed you will be taken to the game selection screen");
 			server.game_over(this.game_id);
 			return;
 		}
@@ -142,20 +142,20 @@ class Game {
 		var scores = [stats[0].scopas, stats[1].scopas];
 		//Num Cards
 		if(stats[0].num_cards > stats[1].num_cards && stats[0].num_cards != stats[1].num_cards) scores[0] += 1;
-		else scores[1] += 1;
+		else if(stats[0].num_cards != stats[1].num_cards) scores[1] += 1;
 		//Seven
 		if(stats[0].seven) scores[0] += 1;
 		else scores[1] += 1;
 		//Suns
 		if(stats[0].suns > stats[1].suns && stats[0].suns != stats[1].suns) scores[0] += 1;
-		else scores[1] += 1;
+		else if(stats[0].suns != stats[1].suns) scores[1] += 1;
 		//Prime
 		if(stats[0].prime > stats[1].prime && stats[0].prime != stats[1].prime) scores[0] += 1;
-		else scores[1] += 1;
+		else if(stats[0].prime != stats[1].prime) scores[1] += 1;
 
 		this.players[0].add_score(scores[0]);
 		this.players[1].add_score(scores[1]);
-		this.alert_all_players("Round over.<br/>Scores:<br/>" + this.players[0].name + ": " + scores[0] + "<br/>" + this.players[1].name + ": " + scores[1] + "<br/><br/>Details:<br/>" + text[0] + "<br/><br/>" + text[1]);
+		this.alert_all_players("Round over.<br/>Scores:<br/>" + this.players[0].name + ": " + scores[0] + "<br/>" + this.players[1].name + ": " + scores[1] + "<br/><br/>Details:<br/><div>" + text[0] + text[1] + "</div>");
 	}
 
 	start_game() {
@@ -469,7 +469,7 @@ class Game {
 		//Gets the players round stats (how many actions, buys etc) into a format that is good for the
 		var stats = ["Scopas: " + this.players[player].scopas];
 		stats.push("No. cards collected: " + this.players[player].cards.length);
-		stats.push("No. cards in deck: " + this.deck.length);
+		stats.push("No. hands remaining: " + this.deck.length/(this.players.length * 3));
 		stats.push("Score so far: " + this.players[player].score);
 		stats.push("Opp. score  : " + this.players[1 - player].score);
 		return stats;

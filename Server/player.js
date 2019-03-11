@@ -89,12 +89,15 @@ class Player {
 
 	get_score_text() {
 		var score = this.calc_score();
-		var text = this.name + ": Had " + score.num_cards + " cards, " + score.suns + " of which were Suns<br/>. They did ";
+		var text = "<div style=\"float:left; width:50%\"><b>" + this.name + "</b><br/>";
+		text +=  "Cards: " + score.num_cards + "<br/>Suns: " + score.suns + "<br/>Seven of Suns: ";
 		if(!score.seven) {
-			text += "not ";
+			text += "No<br/>";
+		} else {
+			text += "Yes<br/>";
 		}
-		text += "collect the 7 of Suns<br/>. The primiera break-down was Suns: " + score.raw.Suns + ", Clubs: " + score.raw.Clubs + ", Swords: " + score.raw.Swords + ", and Cups: " + score.raw.Cups;
-		text += " for a total of " + score.prime + " primiera points.<br/>" + score.scopas + " Scopa(s) were collected"; 
+		text += "Primiera:" + score.prime + "<ul><li>Suns: " + score.raw.Suns + "</li><li>Clubs: " + score.raw.Clubs + "</li><li>Swords: " + score.raw.Swords + "</li><li>Cups: " + score.raw.Cups + "</li></ul>";
+		text += "<br/>Scopas: " + score.scopas + "</div>"; 
 
 		return text;
 	}

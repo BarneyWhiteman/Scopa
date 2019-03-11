@@ -38,6 +38,7 @@ body {
   height: auto;
   border-radius: 10px;
   z-index: 201;
+  overflow: hidden;
 }
 
 #popup_overlay {
@@ -114,42 +115,4 @@ input, textarea {
 
 #emoji_window > button {
   font-size: 200% !important;
-}
-
-@-webkit-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-@-moz-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-
-.fade-in {
-  opacity:0;
-  -webkit-animation:fadeIn ease-in 1;  
-  -moz-animation:fadeIn ease-in 1;
-  animation:fadeIn ease-in 1;
-
-  -webkit-animation-fill-mode:forwards;
-  -moz-animation-fill-mode:forwards;
-  animation-fill-mode:forwards;
-
-  -webkit-animation-duration:0.2s;
-  -moz-animation-duration:0.2s;
-  animation-duration:0.2s;
-}
-
-@-webkit-keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
-@-moz-keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
-@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
-
-.fade-out {
-  opacity:0;
-  -webkit-animation:fadeOut ease-in 1;  
-  -moz-animation:fadeOut ease-in 1;
-  animation:fadeOut ease-in 1;
-
-  -webkit-animation-fill-mode:forwards;
-  -moz-animation-fill-mode:forwards;
-  animation-fill-mode:forwards;
-
-  -webkit-animation-duration:0.2s;
-  -moz-animation-duration:0.2s;
-  animation-duration:0.2s;
 }
